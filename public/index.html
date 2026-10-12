@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>بوابة أبحاث التخرج - كلية الدعوة الإسلامية</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap">
+<style>
+:root{--ink:#14201f;--paper:#f2f5f4;--panel:#fff;--teal:#0f4c47;--teal2:#1b6b64;--gold:#b5832a;--line:#d5dedc;--mute:#5d6f6d;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--ink:#e8efee;--paper:#0e1716;--panel:#16231f;--teal:#2a8a80;--teal2:#3aa397;--gold:#d9a649;--line:#2a3b38;--mute:#9bb0ad}}
+:root[data-theme="dark"]{--ink:#e8efee;--paper:#0e1716;--panel:#16231f;--teal:#2a8a80;--teal2:#3aa397;--gold:#d9a649;--line:#2a3b38;--mute:#9bb0ad}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 16px/1.8 Cairo,Tahoma,sans-serif}
+header{background:var(--teal);color:#fff;padding:22px 20px 0}
+.wrap{max-width:1040px;margin:0 auto}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+header h1{margin:0;font-size:1.7rem;font-weight:700;line-height:1.5}
+header p{margin:0 0 14px;opacity:.85}
+.role{font:inherit;padding:6px 10px;border-radius:6px;border:0;background:rgba(255,255,255,.15);color:#fff}
+.role option{color:#000}
+nav{display:flex;gap:4px;overflow-x:auto}
+.tab{background:none;border:0;color:#fff;opacity:.75;padding:10px 18px;font:600 1rem Cairo,sans-serif;cursor:pointer;border-bottom:3px solid transparent}
+.tab[aria-selected=true]{opacity:1;border-color:var(--gold)}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+main{padding:24px 20px 60px}
+.layout{display:grid;grid-template-columns:230px 1fr;gap:28px}
+@media(max-width:760px){.layout{grid-template-columns:1fr}}
+.cats{list-style:none;margin:0;padding:0}
+.cats button{width:100%;text-align:right;background:none;border:0;border-inline-start:3px solid var(--line);padding:6px 12px;font:inherit;color:var(--ink);cursor:pointer;display:flex;justify-content:space-between}
+.cats button[aria-pressed=true]{border-color:var(--gold);font-weight:700;background:var(--panel)}
+.cats span{color:var(--mute);font-size:.9rem}
+@media(max-width:760px){.cats{display:flex;gap:6px;overflow-x:auto}.cats button{white-space:nowrap;border:1px solid var(--line);border-radius:6px;gap:8px}}
+.bar{display:grid;grid-template-columns:1fr 170px;gap:10px;margin-bottom:10px}
+input,select,textarea{font:inherit;padding:9px 12px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);width:100%}
+.row{display:grid;grid-template-columns:1fr auto;gap:4px 16px;padding:14px 4px;border-bottom:1px solid var(--line);cursor:pointer}
+.row:hover h3{color:var(--teal2)}
+.row h3{margin:0;font-size:1.05rem;font-weight:600}
+.meta{color:var(--mute);font-size:.9rem}
+.st{align-self:center;border:1px solid var(--gold);color:var(--gold);border-radius:4px;padding:0 10px;font-size:.85rem;white-space:nowrap}
+.st.ok{border-color:var(--teal2);color:var(--teal2)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:22px}
+.panel h2{margin:14px 0 0;font-size:1.3rem}
+dl{display:grid;grid-template-columns:120px 1fr;gap:4px 12px;margin:14px 0}
+dt{color:var(--mute)}dd{margin:0}
+.btn{background:var(--teal);color:#fff;border:0;border-radius:6px;padding:8px 20px;font:600 1rem Cairo,sans-serif;cursor:pointer}
+.btn.ghost{background:none;color:var(--teal2);border:1px solid var(--teal2)}
+.admin{border-top:1px solid var(--line);margin-top:16px;padding-top:16px;display:grid;gap:12px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:560px){.two{grid-template-columns:1fr}}
+form{display:grid;gap:14px}
+label{display:grid;gap:4px;font-weight:600}
+.note{background:var(--panel);border-inline-start:4px solid var(--gold);padding:8px 14px;margin:0 0 18px;font-size:.92rem;color:var(--mute)}
+.empty{color:var(--mute);padding:30px 0}
+.toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom,0px));inset-inline:0;margin:auto;width:max-content;max-width:90%;background:var(--ink);color:var(--paper);padding:8px 20px;border-radius:6px}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+<div class="top"><div><h1>بوابة أبحاث التخرج</h1><p>كلية الدعوة الإسلامية</p></div>
+<label style="font-weight:400;font-size:.85rem">عرض تجريبي بصفة<select class="role" id="role"><option value="student">طالب</option><option value="staff">موظف القسم</option><option value="admin">إدارة الكلية</option></select></label></div>
+<nav role="tablist"><button class="tab" role="tab" data-v="list" aria-selected="true">الأبحاث</button><button class="tab" role="tab" data-v="add" aria-selected="false">رفع بحث</button></nav>
+</div></header>
+<main><div class="wrap" id="app"></div></main>
+<script>
+var PROGS=["بكالوريوس الدعوة الإسلامية"];
+var STS=["جديد","قيد المراجعة","يحتاج إلى تعديل","معتمد","مؤرشف"];
+var SEED=[
+{id:1,t:"منهج الدعوة إلى الله في وسائل التواصل الحديثة",s:"طالب نموذجي (١)",sid:"2022001",sv:"د. مشرف (أ)",p:PROGS[0],y:2026,st:"قيد المراجعة",a:"دراسة تحليلية لأساليب الخطاب الدعوي عبر المنصات الرقمية وضوابطه الشرعية.",g:"",me:1},
+{id:2,t:"تخريج أحاديث الأدعية في كتاب مختارات",s:"طالبة نموذجية (٢)",sid:"2022002",sv:"د. مشرف (ب)",p:PROGS[0],y:2026,st:"معتمد",a:"جمع الأحاديث وتخريجها ودراسة أسانيدها والحكم عليها.",g:"92"},
+{id:3,t:"مقاصد الشريعة في فقه المعاملات المعاصرة",s:"طالب نموذجي (٣)",sid:"2021005",sv:"د. مشرف (ج)",p:PROGS[0],y:2025,st:"مؤرشف",a:"بيان أثر المقاصد في الاجتهاد في النوازل المالية.",g:"85"}];
+var db=load(),prog="الكل",stf="الكل",q="",view="list",sel=null,role="student";
+function load(){try{var d=JSON.parse(localStorage.getItem("rp2"));if(d&&d.length)return d}catch(e){}return SEED}
+function save(){try{localStorage.setItem("rp2",JSON.stringify(db))}catch(e){}}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function toast(m){var d=document.createElement("div");d.className="toast";d.textContent=m;document.body.appendChild(d);setTimeout(function(){d.remove()},2400)}
+function vis(){return db.filter(function(p){return role!=="student"||p.me})}
+function render(){
+ var app=document.getElementById("app");
+ document.querySelectorAll(".tab").forEach(function(b){b.setAttribute("aria-selected",b.dataset.v===(view==="add"?"add":"list"))});
+ if(view==="add")return app.innerHTML=addView(),bindAdd();
+ if(view==="one")return app.innerHTML=oneView(),bindOne();
+ var all=vis();
+ var items=all.filter(function(p){return(prog==="الكل"||String(p.y)===prog)&&(stf==="الكل"||p.st===stf)&&(p.t+p.s+p.sv+p.y).indexOf(q)>-1});
+ var cl='<ul class="cats"><li><button aria-pressed="'+(prog==="الكل")+'" data-c="الكل">كل السنوات <span>'+all.length+'</span></button></li>'+Array.from(new Set(all.map(function(p){return String(p.y)}))).sort().reverse().map(function(c){var n=all.filter(function(p){return String(p.y)===c}).length;return'<li><button aria-pressed="'+(prog===c)+'" data-c="'+c+'">'+c+' <span>'+n+'</span></button></li>'}).join("")+"</ul>";
+ var rows=items.length?items.map(function(p){return'<div class="row" tabindex="0" data-id="'+p.id+'"><div><h3>'+esc(p.t)+'</h3><div class="meta">'+esc(p.s)+" - إشراف "+esc(p.sv)+" - "+p.y+'</div></div><div class="st'+(p.st==="معتمد"?" ok":"")+'">'+p.st+"</div></div>"}).join(""):'<p class="empty">لا توجد أبحاث مطابقة. غيّر البحث أو ارفع بحثاً جديداً.</p>';
+ app.innerHTML='<p class="note">نموذج تصميم أولي: البيانات أمثلة تجريبية. اختر الصفة من أعلى الصفحة لترى اختلاف الصلاحيات.</p><div class="layout"><aside>'+cl+'</aside><section><div class="bar"><input id="q" placeholder="ابحث بالعنوان أو الطالب أو المشرف أو السنة" value="'+esc(q)+'"><select id="sf"><option>الكل</option>'+STS.map(function(s){return"<option"+(s===stf?" selected":"")+">"+s+"</option>"}).join("")+"</select></div>"+rows+"</section></div>";
+ app.querySelectorAll("[data-c]").forEach(function(b){b.onclick=function(){prog=b.dataset.c;render()}});
+ document.getElementById("sf").onchange=function(e){stf=e.target.value;render()};
+ var qi=document.getElementById("q");qi.oninput=function(){q=qi.value;var c=qi.selectionStart;render();var n=document.getElementById("q");n.focus();n.setSelectionRange(c,c)};
+ app.querySelectorAll(".row").forEach(function(r){var go=function(){sel=+r.dataset.id;view="one";render()};r.onclick=go;r.onkeydown=function(e){if(e.key==="Enter")go()}});
+}
+function oneView(){var p=db.find(function(x){return x.id===sel});
+ var adm="";
+ if(role!=="student")adm='<div class="admin"><div class="two"><label>حالة البحث<select id="ns">'+STS.map(function(s){return"<option"+(s===p.st?" selected":"")+">"+s+"</option>"}).join("")+'</select></label><label>درجة التقييم من 100<input id="ng" type="number" min="0" max="100" value="'+esc(p.g)+'"></label></div><div><button class="btn" id="sv">حفظ الحالة والتقييم</button></div></div>';
+ var dl=role==="admin"?'<button class="btn" id="dl">تنزيل ملف البحث</button>':'<span class="meta">تنزيل الملف متاح لإدارة الكلية فقط.</span>';
+ return'<div class="panel"><button class="btn ghost" id="back">رجوع إلى القائمة</button><h2>'+esc(p.t)+'</h2><p>'+esc(p.a)+'</p><dl><dt>الباحث</dt><dd>'+esc(p.s)+'</dd><dt>الرقم الجامعي</dt><dd>'+esc(p.sid)+'</dd><dt>المشرف</dt><dd>'+esc(p.sv)+'</dd><dt>البرنامج</dt><dd>'+esc(p.p)+'</dd><dt>السنة</dt><dd>'+p.y+'</dd><dt>الحالة</dt><dd>'+p.st+'</dd><dt>التقييم</dt><dd>'+(p.g?esc(p.g)+" / 100":"لم يُقيَّم بعد")+'</dd></dl>'+dl+adm+"</div>"}
+function bindOne(){document.getElementById("back").onclick=function(){view="list";render()};
+ var d=document.getElementById("dl");if(d)d.onclick=function(){toast("في النسخة الفعلية: رابط تنزيل مؤقت من مخزن خاص")};
+ var s=document.getElementById("sv");if(s)s.onclick=function(){var p=db.find(function(x){return x.id===sel});p.st=document.getElementById("ns").value;p.g=document.getElementById("ng").value;save();toast("تم حفظ الحالة والتقييم");render()}}
+function addView(){return'<div class="panel"><h2 style="margin-top:0">رفع بحث جديد</h2><form id="f"><label>عنوان البحث<input name="t" required></label><div class="two"><label>اسم الطالب أو الطلاب<input name="s" required></label><label>الرقم الجامعي<input name="sid" required inputmode="numeric"></label></div><div class="two"><label>المشرف الأكاديمي<input name="sv" required></label><label>السنة الجامعية<input name="y" type="number" value="2026" min="2000" max="2100"></label></div><label>البرنامج الأكاديمي<select name="p">'+PROGS.map(function(c){return"<option>"+c+"</option>"}).join("")+'</select></label><label>ملخص مختصر<textarea name="a" rows="3" required></textarea></label><label>ملف البحث (PDF أو Word، حتى 50 ميغابايت)<input type="file" name="file" accept=".pdf,.doc,.docx"></label><div><button class="btn" type="submit">إرسال البحث</button></div></form></div>'}
+function bindAdd(){document.getElementById("f").onsubmit=function(e){e.preventDefault();var f=new FormData(e.target);
+ db.unshift({id:Date.now(),t:f.get("t"),s:f.get("s"),sid:f.get("sid"),sv:f.get("sv"),y:+f.get("y"),p:f.get("p"),a:f.get("a"),st:"جديد",g:"",me:role==="student"?1:0});save();toast("تم إرسال البحث. حالته: جديد");view="list";prog="الكل";render()}}
+document.querySelectorAll(".tab").forEach(function(b){b.onclick=function(){view=b.dataset.v;render()}});
+document.getElementById("role").onchange=function(e){role=e.target.value;view="list";render()};
+render();
+</script>
+</body>
+</html>
