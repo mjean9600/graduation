@@ -5,7 +5,12 @@ compatibility_date = "2026-10-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "research-db"
-database_id = "ضع-معرف-قاعدة-البيانات-هنا"
+database_id = "git init
+git add .
+git commit -m "first version"
+git branch -M main
+git remote add origin https://github.com/اسم-حسابك/dawa-college-research.git
+git push -u origin main"
 
 [[r2_buckets]]
 binding = "BUCKET"
