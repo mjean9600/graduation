@@ -1,6 +1,6 @@
 import { json, err, can, getResearch, randomToken, audit, STUDENT_EDITABLE } from '../../../_lib.js';
 
-const MAX = 25 * 1024 * 1024;
+const MAX = 20 * 1024 * 1024; // حد KV لكل قيمة 25 ميغابايت
 const SIGS = { pdf: [0x25, 0x50, 0x44, 0x46], docx: [0x50, 0x4b, 3, 4], doc: [0xd0, 0xcf, 0x11, 0xe0] };
 const TYPES = {
   pdf: 'application/pdf', doc: 'application/msword',
@@ -19,7 +19,7 @@ export async function onRequestPost({ request, env, data, params }) {
 
   let f; try { f = (await request.formData()).get('file'); } catch { return err('طلب غير صالح'); }
   if (!f || typeof f === 'string') return err('اختر ملفاً');
-  if (f.size === 0 || f.size > MAX) return err('حجم الملف يجب أن يكون أقل من 25 ميغابايت');
+  if (f.size === 0 || f.size > MAX) return err('حجم الملف يجب أن يكون أقل من 20 ميغابايت');
   const ext = (f.name.split('.').pop() || '').toLowerCase();
   if (!SIGS[ext]) return err('الأنواع المسموحة: PDF أو Word');
   const head = new Uint8Array(await f.slice(0, 4).arrayBuffer());
@@ -27,7 +27,7 @@ export async function onRequestPost({ request, env, data, params }) {
 
   const v = (await env.DB.prepare('SELECT COALESCE(MAX(version),0)+1 AS v FROM files WHERE research_id=?').bind(r.id).first()).v;
   const key = `researches/${r.id}/v${v}-${randomToken(8)}.${ext}`;
-  await env.BUCKET.put(key, await f.arrayBuffer(), { httpMetadata: { contentType: TYPES[ext] } });
+  await env.FILES.put(key, await f.arrayBuffer());
   await env.DB.prepare('INSERT INTO files(research_id,version,r2_key,original_name,size,uploaded_by,uploaded_at) VALUES(?,?,?,?,?,?,?)')
     .bind(r.id, v, key, f.name.slice(0, 200), f.size, u.id, Date.now()).run();
   // إذا كان البحث "يحتاج إلى تعديل" وأعاد الطالب رفعه ينتقل لـ "قيد المراجعة"
@@ -48,11 +48,12 @@ export async function onRequestGet({ request, env, data, params }) {
     ? await env.DB.prepare('SELECT * FROM files WHERE research_id=? AND version=?').bind(r.id, Number(v)).first()
     : await env.DB.prepare('SELECT * FROM files WHERE research_id=? ORDER BY version DESC LIMIT 1').bind(r.id).first();
   if (!row) return err('لا يوجد ملف', 404);
-  const obj = await env.BUCKET.get(row.r2_key);
+  const obj = await env.FILES.get(row.r2_key, { type: 'stream' });
   if (!obj) return err('الملف غير موجود في التخزين', 404);
   await audit(env, u.id, 'file:download', `${r.id} v${row.version}`);
-  return new Response(obj.body, { headers: {
-    'content-type': obj.httpMetadata?.contentType || 'application/octet-stream',
+  const ext = (row.original_name.split('.').pop() || '').toLowerCase();
+  return new Response(obj, { headers: {
+    'content-type': TYPES[ext] || 'application/octet-stream',
     'content-disposition': `attachment; filename*=UTF-8''${encodeURIComponent(row.original_name)}`,
     'x-content-type-options': 'nosniff', 'cache-control': 'private, no-store',
   } });
