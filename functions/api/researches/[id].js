@@ -53,3 +53,19 @@ export async function onRequestPatch({ request, env, data, params }) {
   await audit(env, u.id, 'research:update', r.id);
   return json({ ok: true });
 }
+
+// حذف بحث نهائياً مع كل نسخ ملفاته: للموظف والإدارة فقط، ويُسجَّل في سجل التدقيق
+export async function onRequestDelete({ env, data, params }) {
+  const u = data.user;
+  if (!can(u, 'research:delete')) return err('غير مصرّح بالحذف', 403);
+  const r = await getResearch(env, params.id, u);
+  if (!r) return err('غير موجود', 404);
+  const files = (await env.DB.prepare('SELECT r2_key FROM files WHERE research_id=?').bind(r.id).all()).results;
+  for (const f of files) await env.FILES.delete(f.r2_key);
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM files WHERE research_id=?').bind(r.id),
+    env.DB.prepare('DELETE FROM researches WHERE id=?').bind(r.id),
+  ]);
+  await audit(env, u.id, 'research:delete', `${r.id} ${String(r.title).slice(0, 60)}`);
+  return json({ ok: true });
+}
