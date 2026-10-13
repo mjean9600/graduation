@@ -1,72 +1,71 @@
-// أدوات مشتركة + مصفوفة الصلاحيات
-const enc = new TextEncoder();
+import { json, err, can, STATUSES, STUDENT_EDITABLE, CATEGORIES, GENDERS, CAMPUSES, getResearch, audit } from '../../_lib.js';
 
-// ===== مصفوفة الصلاحيات: عدّلها هنا فقط =====
-export const PERMS = {
-  student: ['research:create_own', 'research:upload_own'],
-  staff: [
-    'research:view_all', 'research:create_any', 'research:edit_any',
-    'research:update_status', 'research:grade', 'research:upload_any',
-    'users:create_student', 'file:delete', 'research:delete',
-  ],
-  admin: [
-    'research:view_all', 'research:create_any', 'research:edit_any',
-    'research:update_status', 'research:grade', 'research:upload_any',
-    'users:create_student', 'users:manage', 'file:download', 'file:delete', 'research:delete', 'supervisors:manage',
-  ],
-};
-export const can = (u, p) => !!u && (PERMS[u.role] || []).includes(p);
-
-export const STATUSES = ['جديد', 'قيد المراجعة', 'يحتاج إلى تعديل', 'معتمد', 'مؤرشف'];
-export const CATEGORIES = ['قرآن كريم', 'حديث شريف', 'فقه', 'عقيدة', 'دعوة', 'تربية', 'تاريخ', 'لغة عربية', 'لغة إنجليزية'];
-export const GENDERS = ['طلاب', 'طالبات'];
-export const CAMPUSES = ['دير البلح', 'الشمال'];
-export const STUDENT_EDITABLE = ['جديد', 'يحتاج إلى تعديل'];
-
-export const json = (d, s = 200, h = {}) =>
-  new Response(JSON.stringify(d), {
-    status: s,
-    headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...h },
-  });
-export const err = (m, s = 400) => json({ error: m }, s);
-
-const b64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf)));
-const unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
-const same = (a, b) => {
-  if (a.length !== b.length) return false;
-  let r = 0;
-  for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return r === 0;
-};
-
-export async function hashPassword(pw, salt = crypto.getRandomValues(new Uint8Array(16))) {
-  const key = await crypto.subtle.importKey('raw', enc.encode(pw), 'PBKDF2', false, ['deriveBits']);
-  const bits = await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', hash: 'SHA-256', salt, iterations: 100000 }, key, 256);
-  return b64(salt) + ':' + b64(bits);
-}
-export async function verifyPassword(pw, stored) {
-  const h = await hashPassword(pw, unb64(stored.split(':')[0]));
-  return same(h, stored);
-}
-export async function sha256(s) {
-  const d = await crypto.subtle.digest('SHA-256', enc.encode(s));
-  return [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, '0')).join('');
-}
-export const randomToken = (n = 32) =>
-  [...crypto.getRandomValues(new Uint8Array(n))].map((b) => b.toString(16).padStart(2, '0')).join('');
-export function genPassword() {
-  const a = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  return Array.from(crypto.getRandomValues(new Uint8Array(10)), (b) => a[b % a.length]).join('');
+export async function onRequestGet({ env, data, params }) {
+  const r = await getResearch(env, params.id, data.user);
+  if (!r) return err('غير موجود', 404);
+  const files = (await env.DB.prepare(
+    'SELECT version,original_name,size,uploaded_at FROM files WHERE research_id=? ORDER BY version DESC'
+  ).bind(r.id).all()).results;
+  return json({ research: r, files, canDownload: can(data.user, 'file:download'), canDeleteFile: can(data.user, 'file:delete') });
 }
 
-// الطالب لا يرى إلا بحثه، وأي بحث آخر يظهر له "غير موجود"
-export async function getResearch(env, id, user) {
-  const r = await env.DB.prepare('SELECT * FROM researches WHERE id=?').bind(id).first();
-  if (!r) return null;
-  if (user.role === 'student' && r.owner_id !== user.id) return null;
-  return r;
+export async function onRequestPatch({ request, env, data, params }) {
+  const u = data.user;
+  const r = await getResearch(env, params.id, u);
+  if (!r) return err('غير موجود', 404);
+  let b; try { b = await request.json(); } catch { return err('بيانات غير صالحة'); }
+  const set = [], vals = [];
+
+  if (b.status !== undefined) {
+    if (!can(u, 'research:update_status')) return err('غير مصرّح بتغيير الحالة', 403);
+    if (!STATUSES.includes(b.status)) return err('حالة غير صالحة');
+    set.push('status=?'); vals.push(b.status);
+  }
+  if (b.grade !== undefined) {
+    if (!can(u, 'research:grade')) return err('غير مصرّح بالتقييم', 403);
+    const g = b.grade === '' || b.grade === null ? null : Number(b.grade);
+    if (g !== null && !(g >= 0 && g <= 100)) return err('الدرجة من 0 إلى 100');
+    set.push('grade=?'); vals.push(g);
+  }
+  if (['title', 'abstract', 'category', 'supervisor', 'gender', 'campus'].some((k) => b[k] !== undefined)) {
+    const allowed = u.role === 'student' ? STUDENT_EDITABLE.includes(r.status) : can(u, 'research:edit_any');
+    if (!allowed) return err('لا يمكن تعديل البحث في حالته الحالية', 403);
+    if (b.title !== undefined) { const t = String(b.title).trim(); if (!t || t.length > 300) return err('العنوان غير صالح'); set.push('title=?'); vals.push(t); }
+    if (b.abstract !== undefined) { const a = String(b.abstract).trim(); if (!a || a.length > 3000) return err('الملخص غير صالح'); set.push('abstract=?'); vals.push(a); }
+    if (b.category !== undefined) { if (!CATEGORIES.includes(b.category)) return err('تصنيف غير صالح'); set.push('category=?'); vals.push(b.category); }
+    if (b.supervisor !== undefined) {
+      const s = String(b.supervisor).trim();
+      if (s !== r.supervisor) {
+        const ok = await env.DB.prepare('SELECT 1 FROM supervisors WHERE name=? AND active=1').bind(s).first();
+        if (!ok) return err('اختر المشرف الأكاديمي من القائمة');
+      }
+      set.push('supervisor=?'); vals.push(s);
+    }
+    if (b.gender !== undefined || b.campus !== undefined) {
+      if (!can(u, 'research:edit_any')) return err('غير مصرّح', 403);
+      if (b.gender !== undefined) { if (!GENDERS.includes(b.gender)) return err('تصنيف الطلاب غير صالح'); set.push('gender=?'); vals.push(b.gender); }
+      if (b.campus !== undefined) { if (!CAMPUSES.includes(b.campus)) return err('مكان الدراسة غير صالح'); set.push('campus=?'); vals.push(b.campus); }
+    }
+  }
+  if (!set.length) return err('لا تغييرات');
+  set.push('updated_at=?'); vals.push(Date.now());
+  await env.DB.prepare(`UPDATE researches SET ${set.join(',')} WHERE id=?`).bind(...vals, r.id).run();
+  await audit(env, u.id, 'research:update', r.id);
+  return json({ ok: true });
 }
-export const audit = (env, userId, action, target) =>
-  env.DB.prepare('INSERT INTO audit(user_id,action,target,at) VALUES(?,?,?,?)')
-    .bind(userId, action, String(target ?? ''), Date.now()).run();
+
+// حذف بحث كاملاً مع كل نسخ ملفاته: للموظف والإدارة فقط، ويُسجَّل في سجل التدقيق
+export async function onRequestDelete({ env, data, params }) {
+  const u = data.user;
+  if (!can(u, 'research:delete')) return err('غير مصرّح بحذف الأبحاث', 403);
+  const r = await getResearch(env, params.id, u);
+  if (!r) return err('غير موجود', 404);
+  const files = (await env.DB.prepare('SELECT r2_key FROM files WHERE research_id=?').bind(r.id).all()).results;
+  for (const f of files) await env.FILES.delete(f.r2_key);
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM files WHERE research_id=?').bind(r.id),
+    env.DB.prepare('DELETE FROM researches WHERE id=?').bind(r.id),
+  ]);
+  await audit(env, u.id, 'research:delete', `${r.id} ${String(r.title).slice(0, 60)}`);
+  return json({ ok: true });
+}
