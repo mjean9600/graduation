@@ -7,12 +7,12 @@ export const PERMS = {
   staff: [
     'research:view_all', 'research:create_any', 'research:edit_any',
     'research:update_status', 'research:grade', 'research:upload_any',
-    'users:create_student', 'research:delete',
+    'users:create_student', 'file:delete', 'research:delete',
   ],
   admin: [
     'research:view_all', 'research:create_any', 'research:edit_any',
     'research:update_status', 'research:grade', 'research:upload_any',
-    'users:create_student', 'users:manage', 'file:download', 'supervisors:manage', 'research:delete',
+    'users:create_student', 'users:manage', 'file:download', 'file:delete', 'research:delete', 'supervisors:manage',
   ],
 };
 export const can = (u, p) => !!u && (PERMS[u.role] || []).includes(p);
