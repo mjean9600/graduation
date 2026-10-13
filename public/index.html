@@ -12,6 +12,8 @@
 body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.8 Cairo,Tahoma,sans-serif;padding-bottom:env(safe-area-inset-bottom,0)}
 .wrap{max-width:1100px;margin:0 auto;padding:0 20px}
 .wrap.pg{padding-top:32px;padding-bottom:0}
+.hbtns{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}.hb{border:0;border-radius:8px;padding:6px 16px;font:600 .9rem Cairo,sans-serif;cursor:pointer;color:#fff}.hb.g{background:var(--gold);color:#3b2d00}.hb.b{background:var(--blue)}.hb.r{background:var(--red)}.hb.o{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.6)}
+.item{padding:12px 4px;border-bottom:1px solid var(--line)}.item:last-child{border-bottom:0}.frame{width:100%;height:75vh;border:1px solid var(--line);border-radius:8px;background:#fff}
 .top{background:#f9fbfa;padding:12px 0;padding-top:calc(12px + env(safe-area-inset-top,0px))}
 .top .wrap{display:flex;justify-content:space-between;align-items:center;gap:12px}
 .brand{display:flex;align-items:center;gap:14px;color:var(--green);font-weight:700;font-size:1.5rem}
@@ -73,10 +75,10 @@ mono{font-family:Consolas,monospace;direction:ltr;unicode-bidi:plaintext}
 <script>
 var ST=["جديد","قيد المراجعة","يحتاج إلى تعديل","معتمد","مؤرشف"];
 var BCLS={"جديد":"n","قيد المراجعة":"r","يحتاج إلى تعديل":"e","معتمد":"","مؤرشف":"a"};
-var ROLE={student:"طالب",staff:"موظف القسم",admin:"إدارة الكلية"};
+var ROLE={student:"طالب",staff:"المشرف",admin:"إدارة الكلية"};
 var CATS=["قرآن كريم","حديث شريف","فقه","عقيدة","دعوة","تربية","تاريخ","لغة عربية","لغة إنجليزية"];
 var GENDERS=["طلاب","طالبات"],CAMPUSES=["دير البلح","الشمال"];
-var S={me:null,view:"list",list:[],detail:null,users:[],sups:[],creds:null,q:"",cat:"الكل",year:"الكل",gen:"الكل",camp:"الكل",st:"الكل",edit:false};
+var S={me:null,view:"list",list:[],detail:null,users:[],sups:[],links:[],lib:[],sec:"bank",libManage:false,linksManage:false,qr:{year:"الكل",cat:"الكل",gen:"الكل",camp:"الكل",st:"الكل",sup:"الكل",txt:""},creds:null,q:"",cat:"الكل",year:"الكل",gen:"الكل",camp:"الكل",st:"الكل",edit:false};
 function $(s){return document.querySelector(s)}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 function can(p){return !!S.me&&S.me.perms.indexOf(p)>-1}
@@ -102,6 +104,7 @@ function navHtml(){
   if(S.me&&!S.me.mustChange){
     var tabs=[["list","الأبحاث"]];
     if(can("research:create_own")||can("research:create_any"))tabs.push(["add","رفع بحث"]);
+    if(can("research:view_all"))tabs.push(["query","استعلام"]);
     if(can("users:create_student"))tabs.push(["users","إدارة الحسابات"]);
     if(can("supervisors:manage"))tabs.push(["sups","المشرفون"]);
     t=tabs.map(function(x){var cur=S.view===x[0]||(S.view==="detail"&&x[0]==="list");return '<a data-v="'+x[0]+'"'+(cur?' aria-current="page"':"")+' tabindex="0">'+x[1]+"</a>"}).join("");
@@ -109,18 +112,26 @@ function navHtml(){
   var chip=S.me?'<div class="chip"><span>'+esc(S.me.name)+" - "+ROLE[S.me.role]+'</span>'+(S.me.mustChange?"":'<button id="pwb">كلمة المرور</button>')+'<button id="out">خروج</button></div>':"";
   return '<nav class="bar noprint"><div class="wrap"><div class="tabs">'+t+"</div>"+chip+"</div></nav>";
 }
-function heroHtml(t,s){return '<div class="hero noprint"><div class="wrap"><h1>'+esc(t)+"</h1>"+(s?"<p>"+esc(s)+"</p>":"")+"</div></div>"}
+function heroHtml(t,s){
+  var b="";
+  if(S.me&&!S.me.mustChange&&S.view!=="pw")b='<div class="hbtns">'+[["links","روابط بحثية مساعدة","g"],["bank","بنك المشاريع","b"],["guide","دليل البحث","r"],["template","قالب البحث","o"]].map(function(x){return '<button class="hb '+x[2]+'" data-h="'+x[0]+'">'+x[1]+"</button>"}).join("")+"</div>";
+  return '<div class="hero noprint"><div class="wrap"><h1>'+esc(t)+"</h1>"+(s?"<p>"+esc(s)+"</p>":"")+b+"</div></div>";
+}
 function render(){
   var hero,content,after;
   if(!S.me){hero=["بوابة أبحاث التخرج","سجّل الدخول بالحساب الذي أعطاك إياه قسم أبحاث التخرج"];content=loginView();after=bindLogin}
   else if(S.me.mustChange||S.view==="pw"){hero=["تغيير كلمة المرور",S.me.mustChange?"يجب تغيير كلمة المرور المؤقتة قبل المتابعة":"اختر كلمة مرور جديدة"];content=pwView();after=bindPw}
   else if(S.view==="add"){hero=["رفع بحث جديد","كلية الدعوة الإسلامية - بكالوريوس الدعوة الإسلامية"];content=addView();after=bindAdd}
   else if(S.view==="users"){hero=["إدارة الحسابات","إنشاء حسابات الطلاب وإدارتها"];content=usersView();after=bindUsers}
+  else if(S.view==="query"){hero=["استعلام عن الأبحاث","اختر الفلاتر ثم صدّر النتائج إلى Excel"];content=queryView();after=bindQuery}
+  else if(S.view==="links"){hero=["روابط بحثية مساعدة","روابط لأبحاث ومصادر يستعين بها الطالب"];content=linksView();after=bindLinks}
+  else if(S.view==="lib"){hero=LIBT[S.sec];content=libView();after=bindLib}
   else if(S.view==="sups"){hero=["المشرفون الأكاديميون","القائمة التي يختار منها الطلاب عند رفع البحث"];content=supsView();after=bindSups}
   else if(S.view==="detail"&&S.detail){hero=["تفاصيل البحث",S.detail.research.title];content=detailView();after=bindDetail}
   else{hero=["أبحاث التخرج","كلية الدعوة الإسلامية - قسم أبحاث التخرج"];content=listView();after=bindList}
   $("#root").innerHTML=header()+navHtml()+heroHtml(hero[0],hero[1])+'<main class="wrap pg" style="padding-top:32px">'+content+'<div style="height:80px" aria-hidden="true"></div></main><footer class="noprint">جميع الحقوق محفوظة - كلية الدعوة الإسلامية - غزة</footer>';
   document.querySelectorAll(".tabs a").forEach(function(a){a.onclick=act(function(){return go(a.dataset.v)})});
+  document.querySelectorAll("[data-h]").forEach(function(b){b.onclick=act(function(){return go(b.dataset.h)})});
   var o=$("#out");if(o)o.onclick=act(async function(){await api("/logout",{method:"POST"});S.me=null;S.view="list";render()});
   var p=$("#pwb");if(p)p.onclick=function(){S.view="pw";render()};
   if(after)after();
@@ -130,7 +141,10 @@ async function go(v){
   if(v==="list"){S.list=(await api("/researches")).researches}
   if(v==="users"){S.users=(await api("/users")).users}
   if(v==="add"||v==="sups"){S.sups=(await api("/supervisors"+(v==="sups"?"?all=1":""))).supervisors}
-  S.view=v;render();
+  if(v==="query"){S.list=(await api("/researches")).researches}
+  if(v==="links"){var L=await api("/links");S.links=L.links;S.linksManage=L.canManage}
+  if(v==="bank"||v==="guide"||v==="template"){var B=await api("/library?section="+v);S.lib=B.items;S.libManage=B.canManage;S.sec=v;v="lib"}
+  S.view=v;render();window.scrollTo(0,0);
 }
 async function openDetail(id){if(!activeSups().length)S.sups=(await api("/supervisors")).supervisors||[];var d=await api("/researches/"+id);if(!d||!d.research)throw new Error("استجابة غير متوقعة من الخادم. تأكد أن ملف functions/api/researches/[id].js على GitHub هو الصحيح");S.detail=d;S.edit=false;S.view="detail";render()}
 
@@ -176,7 +190,7 @@ function detailView(){
   var files=D.files.length?'<div class="scroll"><table><tr><th>النسخة</th><th>الملف</th><th>الحجم</th><th>التاريخ</th>'+((D.canDownload||D.canDeleteFile)?"<th></th>":"")+"</tr>"+D.files.map(function(f){return "<tr><td>"+f.version+"</td><td>"+esc(f.original_name)+"</td><td>"+size(f.size)+"</td><td>"+day(f.uploaded_at)+"</td>"+((D.canDownload||D.canDeleteFile)?"<td>"+(D.canDownload?'<a class="btn sm" href="/api/researches/'+r.id+"/file?v="+f.version+'">تنزيل</a> ':"")+(D.canDeleteFile?'<button class="btn red sm" data-fd="'+f.version+'">حذف</button>':"")+"</td>":"")+"</tr>"}).join("")+"</table></div>":'<p class="empty">لم يُرفع ملف بعد.</p>';
   var info=S.edit?'<form id="ef"><label>العنوان<input name="t" value="'+esc(r.title)+'" required maxlength="300"></label><div class="two"><label>تصنيف البحث<select name="c">'+opts(CATS,r.category)+'</select></label><label>المشرف الأكاديمي<select name="v">'+supOpts(r.supervisor)+"</select></label></div>"+(can("research:edit_any")?'<div class="two"><label>تصنيف الطلاب<select name="g">'+opts(GENDERS,r.gender)+'</select></label><label>مكان الدراسة<select name="p">'+opts(CAMPUSES,r.campus)+"</select></label></div>":"")+'<label>الملخص<textarea name="a" rows="4" required maxlength="3000">'+esc(r.abstract)+'</textarea></label><div><button class="btn" type="submit">حفظ التعديل</button> <button class="btn ghost" type="button" id="ec">إلغاء</button></div></form>':"<h2>"+esc(r.title)+"</h2><p>"+esc(r.abstract)+"</p>";
   var admin=(can("research:update_status")||can("research:grade"))?'<div class="card noprint"><h2>المراجعة والتقييم</h2><div class="two"><label>حالة البحث<select id="ns">'+ST.map(function(s){return "<option"+(s===r.status?" selected":"")+">"+s+"</option>"}).join("")+'</select></label><label>الدرجة من 100<input id="ng" type="number" min="0" max="100" step="0.5" value="'+(r.grade==null?"":r.grade)+'"></label></div><div style="margin-top:12px"><button class="btn" id="sv">حفظ الحالة والتقييم</button></div></div>':"";
-  var up=upOk?'<div class="card noprint"><h2>رفع نسخة جديدة</h2><div class="stack"><input type="file" id="uf" accept=".pdf,.doc,.docx"><div class="meta">PDF أو Word حتى 20 ميغابايت. النسخ السابقة تبقى محفوظة.</div><div><button class="btn" id="ub">رفع الملف</button></div></div></div>':(me.role==="student"?'<p class="warn">لا يمكن رفع ملف جديد إلا عندما تكون الحالة «جديد» أو «يحتاج إلى تعديل».</p>':"");
+  var up=upOk?'<div class="card noprint"><h2>رفع نسخة جديدة</h2><div class="stack"><input type="file" id="uf" accept=".pdf,.doc,.docx" multiple><div class="meta">PDF أو Word حتى 20 ميغابايت للملف، ويمكنك اختيار عدة ملفات (حتى 10). كل ملف يُحفظ كنسخة مستقلة.</div><div><button class="btn" id="ub">رفع الملف</button></div></div></div>':(me.role==="student"?'<p class="warn">لا يمكن رفع ملف جديد إلا عندما تكون الحالة «جديد» أو «يحتاج إلى تعديل».</p>':"");
   return '<div class="card"><button class="btn ghost sm noprint" id="bk">رجوع إلى القائمة</button><div style="margin-top:10px">'+info+"</div><dl><dt>الطلاب</dt><dd>"+esc(r.students)+"</dd><dt>التصنيف</dt><dd>"+esc(r.gender||"-")+"</dd><dt>مكان الدراسة</dt><dd>"+esc(r.campus||"-")+"</dd><dt>تصنيف البحث</dt><dd>"+esc(r.category)+"</dd><dt>المشرف الأكاديمي</dt><dd>"+esc(r.supervisor)+"</dd><dt>السنة</dt><dd>"+r.year+'</dd><dt>الحالة</dt><dd><span class="badge '+BCLS[r.status]+'">'+r.status+"</span></dd><dt>الدرجة</dt><dd>"+(r.grade==null?"لم يُقيَّم بعد":esc(r.grade)+" / 100")+"</dd></dl>"+(editable&&!S.edit?'<button class="btn ghost sm noprint" id="eb">تعديل بيانات البحث</button> ':"")+(can("research:delete")?'<button class="btn red sm noprint" id="del">حذف البحث كاملاً</button>':"")+'</div><div class="card"><h2>ملفات البحث</h2>'+files+(D.canDownload?"":'<div class="meta">تنزيل الملفات متاح لإدارة الكلية فقط.</div>')+"</div>"+up+admin;
 }
 function bindDetail(){
@@ -197,8 +211,8 @@ function bindDetail(){
   var sv=$("#sv");if(sv)sv.onclick=act(async function(){var b={};
     if(can("research:update_status"))b.status=$("#ns").value;if(can("research:grade"))b.grade=$("#ng").value;
     await api("/researches/"+r.id,{method:"PATCH",body:b});toast("تم الحفظ");await openDetail(r.id)});
-  var ub=$("#ub");if(ub)ub.onclick=act(async function(){var f=$("#uf").files[0];if(!f)throw new Error("اختر ملفاً أولاً");
-    var fd=new FormData();fd.append("file",f);await api("/researches/"+r.id+"/file",{method:"POST",body:fd});toast("تم رفع الملف");await openDetail(r.id)});
+  var ub=$("#ub");if(ub)ub.onclick=act(async function(){var fl=$("#uf").files;if(!fl.length)throw new Error("اختر ملفاً أولاً");
+    await uploadMany(r.id,fl);await openDetail(r.id)});
 }
 
 /* ===== رفع بحث جديد ===== */
@@ -207,17 +221,15 @@ function addView(){
   if(!activeSups().length)return '<div class="card"><p class="warn">لم تضف إدارة الكلية قائمة المشرفين الأكاديميين بعد، فلا يمكن رفع بحث الآن. تواصل مع الإدارة.</p></div>';
   var needG=staff||!S.me.gender,needC=staff||!S.me.campus,req=staff?"":" required";
   var extra=(needG||needC)?'<div class="two">'+(needG?'<label>تصنيف الطلاب'+(staff?" (إن لم يكن في حساب الطالب)":"")+'<select name="g"'+req+">"+opts(GENDERS,"")+"</select></label>":"")+(needC?'<label>مكان الدراسة'+(staff?" (إن لم يكن في حساب الطالب)":"")+'<select name="p"'+req+">"+opts(CAMPUSES,"")+"</select></label>":"")+"</div>":"";
-  return '<div class="card"><form id="af">'+(staff?'<label>الرقم الجامعي للطالب صاحب البحث<input name="o" required inputmode="numeric"></label>':"")+'<label>عنوان البحث<input name="t" required maxlength="300"></label><div class="two"><label>تصنيف البحث<select name="c" required>'+opts(CATS,"")+'</select></label><label>المشرف الأكاديمي<select name="v" required>'+supOpts("")+'</select></label></div><div class="two"><label>اسم الطالب أو الطلاب<input name="s" required value="'+(staff?"":esc(S.me.name))+'"></label><label>سنة التخرج<input name="y" type="number" value="'+new Date().getFullYear()+'" min="2000" max="2100" required></label></div>'+extra+'<label>ملخص مختصر<textarea name="a" rows="4" required maxlength="3000"></textarea></label><label>ملف البحث (PDF أو Word، حتى 20 ميغابايت)<input type="file" name="f" accept=".pdf,.doc,.docx"></label><div><button class="btn" type="submit">إرسال البحث</button></div></form></div>';
+  return '<div class="card"><form id="af">'+(staff?'<label>الرقم الجامعي للطالب صاحب البحث<input name="o" required inputmode="numeric"></label>':"")+'<label>عنوان البحث<input name="t" required maxlength="300"></label><div class="two"><label>تصنيف البحث<select name="c" required>'+opts(CATS,"")+'</select></label><label>المشرف الأكاديمي<select name="v" required>'+supOpts("")+'</select></label></div><div class="two"><label>اسم الطالب أو الطلاب<input name="s" required value="'+(staff?"":esc(S.me.name))+'"></label><label>سنة التخرج<input name="y" type="number" value="'+new Date().getFullYear()+'" min="2000" max="2100" required></label></div>'+extra+'<label>ملخص مختصر<textarea name="a" rows="4" required maxlength="3000"></textarea></label><label>ملفات البحث (PDF أو Word، حتى 20 ميغابايت للملف، ويمكن اختيار عدة ملفات)<input type="file" name="f" accept=".pdf,.doc,.docx" multiple></label><div><button class="btn" type="submit">إرسال البحث</button></div></form></div>';
 }
 function bindAdd(){$("#af").onsubmit=act(async function(e){e.preventDefault();var f=new FormData(e.target),b={title:f.get("t"),students:f.get("s"),supervisor:f.get("v"),category:f.get("c"),year:f.get("y"),abstract:f.get("a")};
   if(f.get("o"))b.ownerUsername=f.get("o");
   if(f.get("g"))b.gender=f.get("g");if(f.get("p"))b.campus=f.get("p");
   var res=await api("/researches",{method:"POST",body:b});
-  var file=f.get("f");
-  if(file&&file.size){var fd=new FormData();fd.append("file",file);
-    try{await api("/researches/"+res.id+"/file",{method:"POST",body:fd});toast("تم رفع البحث والملف")}
-    catch(x){toast("حُفظ البحث لكن فشل رفع الملف: "+x.message,true)}}
-  else toast("تم حفظ البحث. ارفع الملف من صفحة التفاصيل");
+  var fl=e.target.querySelector("input[name=f]").files;
+  if(fl.length){try{await uploadMany(res.id,fl)}catch(x){toast("حُفظ البحث لكن "+x.message,true)}}
+  else toast("تم حفظ البحث. ارفع الملفات من صفحة التفاصيل");
   await openDetail(res.id)})}
 
 /* ===== إدارة الحسابات ===== */
@@ -225,9 +237,10 @@ function usersView(){
   var mg=can("users:manage");
   var cr=S.creds?'<div class="card" id="creds"><h2>كلمات المرور المؤقتة</h2><p class="warn">تظهر هذه الكلمات مرة واحدة فقط. سلّمها للطلاب ثم احذف هذه الصفحة. سيُطلب من كل طالب تغييرها عند أول دخول.</p><div class="scroll"><table><tr><th>اسم المستخدم</th><th>الاسم</th><th>كلمة المرور المؤقتة</th></tr>'+S.creds.map(function(c){return "<tr><td><mono>"+esc(c.username)+"</mono></td><td>"+esc(c.name||"")+"</td><td><mono>"+esc(c.tempPassword)+"</mono></td></tr>"}).join("")+'</table></div><div class="noprint" style="margin-top:12px"><button class="btn" id="cp">نسخ الكل</button> <button class="btn ghost" id="pr">طباعة</button> <button class="btn ghost" id="cc">إخفاء</button></div></div>':"";
   var users='<div class="card noprint"><h2>الحسابات ('+S.users.length+')</h2><div class="scroll"><table><tr><th>اسم المستخدم</th><th>الاسم</th><th>الدور</th><th>التصنيف</th><th>مكان الدراسة</th><th>الحالة</th><th></th></tr>'+S.users.map(function(u){return "<tr><td><mono>"+esc(u.username)+"</mono></td><td>"+esc(u.name)+"</td><td>"+ROLE[u.role]+"</td><td>"+esc(u.gender||"-")+"</td><td>"+esc(u.campus||"-")+"</td><td>"+(u.active?"فعّال":"موقوف")+(u.must_change&&u.active?" (لم يغيّر كلمة المرور)":"")+'</td><td><button class="btn ghost sm" data-a="reset" data-id="'+u.id+'">إعادة تعيين</button> <button class="btn ghost sm" data-a="'+(u.active?"deactivate":"activate")+'" data-id="'+u.id+'">'+(u.active?"إيقاف":"تفعيل")+"</button></td></tr>"}).join("")+"</table></div></div>";
-  return cr+'<div class="card noprint"><h2>إضافة حسابات</h2><form id="uf"><label>سطر لكل حساب: الرقم الجامعي ثم الاسم (يمكنك لصق عمودين من Excel)<textarea name="l" rows="6" required placeholder="2022001&#9;أحمد محمد علي&#10;2022002&#9;سارة خالد"></textarea></label><div class="two"><label>تصنيف الطلاب (لكل حسابات هذه الدفعة)<select name="g">'+opts(GENDERS,"")+'</select></label><label>مكان الدراسة (لكل حسابات هذه الدفعة)<select name="c">'+opts(CAMPUSES,"")+"</select></label></div>"+(mg?'<label>الدور<select name="r"><option value="student">طالب</option><option value="staff">موظف القسم</option><option value="admin">إدارة الكلية</option></select></label>':"")+'<div class="meta">أنشئ الطلاب والطالبات في دفعتين منفصلتين لاختلاف التصنيف.</div><div><button class="btn" type="submit">إنشاء الحسابات</button></div></form></div>'+users;
+  return cr+'<div class="card noprint"><h2>إضافة حسابات</h2><form id="uf">'+(mg?'<label>الدور<select name="r" id="ur"><option value="student">طالب</option><option value="staff">المشرف</option><option value="admin">إدارة الكلية</option></select></label>':"")+'<label><span id="ul">سطر لكل حساب: الرقم الجامعي ثم الاسم (يمكنك لصق عمودين من Excel)</span><textarea name="l" rows="6" required placeholder="2022001&#9;أحمد محمد علي&#10;2022002&#9;سارة خالد"></textarea></label><div class="two" id="stuf"><label>تصنيف الطلاب (لكل حسابات هذه الدفعة)<select name="g">'+opts(GENDERS,"")+'</select></label><label>مكان الدراسة (لكل حسابات هذه الدفعة)<select name="c">'+opts(CAMPUSES,"")+'</select></label></div><div class="meta" id="uh">أنشئ الطلاب والطالبات في دفعتين منفصلتين لاختلاف التصنيف.</div><div><button class="btn" type="submit">إنشاء الحسابات</button></div></form></div>'+users;
 }
 function bindUsers(){
+  var ur=$("#ur");if(ur)ur.onchange=function(){var st=ur.value==="student";$("#stuf").style.display=st?"":"none";$("#uh").style.display=st?"":"none";$("#ul").textContent=st?"سطر لكل حساب: الرقم الجامعي ثم الاسم (يمكنك لصق عمودين من Excel)":"سطر لكل حساب: اسم المستخدم (بالإنجليزية بلا مسافات) ثم الاسم، مثل: ahmad.ali  أحمد علي"};
   $("#uf").onsubmit=act(async function(e){e.preventDefault();var f=new FormData(e.target),role=f.get("r")||"student",list=[],bad=0;
     if(role==="student"&&(!f.get("g")||!f.get("c")))throw new Error("اختر تصنيف الطلاب ومكان الدراسة");
     String(f.get("l")).split(/\r?\n/).forEach(function(line){line=line.trim();if(!line)return;var m=line.match(/^(\S+?)[\t,،;\s]+(.+)$/);if(m)list.push({username:m[1],name:m[2].trim(),role:role});else bad++});
@@ -246,6 +259,80 @@ function bindUsers(){
   var cp=$("#cp");if(cp)cp.onclick=act(async function(){await navigator.clipboard.writeText(S.creds.map(function(c){return c.username+"\t"+(c.name||"")+"\t"+c.tempPassword}).join("\n"));toast("تم النسخ")});
   var pr=$("#pr");if(pr)pr.onclick=function(){window.print()};
   var cc=$("#cc");if(cc)cc.onclick=function(){S.creds=null;render()};
+}
+
+/* ===== رفع عدة ملفات ===== */
+async function uploadMany(id,files){
+  if(files.length>10)throw new Error("الحد الأقصى 10 ملفات في المرة الواحدة");
+  var ok=0,fail=[];
+  for(var i=0;i<files.length;i++){var fd=new FormData();fd.append("file",files[i]);
+    try{await api("/researches/"+id+"/file",{method:"POST",body:fd});ok++}catch(e){fail.push(files[i].name+": "+e.message)}}
+  if(ok)toast("تم رفع "+ok+" ملف");
+  if(fail.length)toast("تعذّر رفع: "+fail.join(" | "),true);
+}
+
+/* ===== الاستعلام (للمشرف والإدارة) ===== */
+function qrRows(){var q=S.qr;return S.list.filter(function(p){return(q.year==="الكل"||String(p.year)===q.year)&&(q.cat==="الكل"||p.category===q.cat)&&(q.gen==="الكل"||p.gender===q.gen)&&(q.camp==="الكل"||p.campus===q.camp)&&(q.st==="الكل"||p.status===q.st)&&(q.sup==="الكل"||p.supervisor===q.sup)&&(p.students+" "+p.title).indexOf(q.txt)>-1})}
+function qrTable(){
+  var rows=qrRows();
+  return "<p><b>عدد النتائج: "+rows.length+"</b></p>"+(rows.length?'<div class="scroll"><table><tr><th>#</th><th>عنوان البحث</th><th>الطلاب</th><th>التصنيف</th><th>مكان الدراسة</th><th>تصنيف البحث</th><th>المشرف الأكاديمي</th><th>السنة</th><th>الحالة</th><th>الدرجة</th></tr>'+rows.map(function(p,i){return "<tr><td>"+(i+1)+"</td><td>"+esc(p.title)+"</td><td>"+esc(p.students)+"</td><td>"+esc(p.gender||"-")+"</td><td>"+esc(p.campus||"-")+"</td><td>"+esc(p.category)+"</td><td>"+esc(p.supervisor)+"</td><td>"+p.year+"</td><td>"+p.status+"</td><td>"+(p.grade==null?"":p.grade)+"</td></tr>"}).join("")+"</table></div>":'<p class="empty">لا توجد نتائج مطابقة.</p>');
+}
+function queryView(){
+  var q=S.qr,years=Array.from(new Set(S.list.map(function(p){return String(p.year)}))).sort().reverse(),sups=Array.from(new Set(S.list.map(function(p){return p.supervisor}))).sort();
+  return '<div class="card noprint"><h2>استعلام عن الأبحاث</h2><div class="two"><label>سنة البحث<select id="qy">'+opts(years,q.year,"كل السنوات")+'</select></label><label>تصنيف البحث<select id="qc">'+opts(CATS,q.cat,"كل التصنيفات")+'</select></label><label>تصنيف الطلاب<select id="qg">'+opts(GENDERS,q.gen,"طلاب وطالبات")+'</select></label><label>مكان الدراسة<select id="qp">'+opts(CAMPUSES,q.camp,"كل الأماكن")+'</select></label><label>الحالة<select id="qs">'+opts(ST,q.st,"كل الحالات")+'</select></label><label>المشرف الأكاديمي<select id="qv">'+opts(sups,q.sup,"كل المشرفين")+'</select></label></div><label style="margin-top:12px">اسم الطالب أو عنوان البحث<input id="qt" value="'+esc(q.txt)+'"></label><div style="margin-top:12px"><button class="btn" id="qx">تصدير النتائج إلى Excel</button> <button class="btn ghost" id="qpr">طباعة</button> <button class="btn ghost" id="qrs">مسح الفلاتر</button></div></div><div class="card" id="qres">'+qrTable()+"</div>";
+}
+function csvCell(v){v=String(v==null?"":v);if(/^[=+\-@\t]/.test(v))v="'"+v;return '"'+v.replace(/"/g,'""')+'"'}
+function exportCsv(){
+  var rows=qrRows(),head=["#","عنوان البحث","الطلاب","التصنيف","مكان الدراسة","تصنيف البحث","المشرف الأكاديمي","السنة","الحالة","الدرجة"];
+  var lines=[head].concat(rows.map(function(p,i){return [i+1,p.title,p.students,p.gender,p.campus,p.category,p.supervisor,p.year,p.status,p.grade]}));
+  var text="\ufeff"+lines.map(function(l){return l.map(csvCell).join(",")}).join("\r\n");
+  var a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type:"text/csv;charset=utf-8"}));a.download="graduation-research-query.csv";document.body.appendChild(a);a.click();a.remove();
+}
+function bindQuery(){
+  [["qy","year"],["qc","cat"],["qg","gen"],["qp","camp"],["qs","st"],["qv","sup"]].forEach(function(p){$("#"+p[0]).onchange=function(e){S.qr[p[1]]=e.target.value;$("#qres").innerHTML=qrTable()}});
+  $("#qt").oninput=function(e){S.qr.txt=e.target.value;$("#qres").innerHTML=qrTable()};
+  $("#qx").onclick=function(){if(!qrRows().length)return toast("لا توجد نتائج للتصدير",true);exportCsv()};
+  $("#qpr").onclick=function(){window.print()};
+  $("#qrs").onclick=function(){S.qr={year:"الكل",cat:"الكل",gen:"الكل",camp:"الكل",st:"الكل",sup:"الكل",txt:""};render()};
+}
+
+/* ===== الروابط البحثية المساعدة ===== */
+function linksView(){
+  var form=S.linksManage?'<div class="card noprint"><h2>إضافة رابط</h2><form id="lkf"><label>عنوان الرابط<input name="t" required maxlength="200"></label><label>الرابط (يبدأ بـ https://)<input name="u" type="url" required placeholder="https://" dir="ltr"></label><label>معلومات عن هذا الرابط (مثل: مجلة محكّمة، دائرة معارف، قاعدة بحوث)<textarea name="d" rows="3" maxlength="1000"></textarea></label><div><button class="btn" type="submit">إضافة الرابط</button></div></form></div>':"";
+  var list=S.links.length?S.links.map(function(l){var href=/^https?:\/\//i.test(l.url)?l.url:"#";return '<div class="item"><a href="'+esc(href)+'" target="_blank" rel="noopener noreferrer"><b>'+esc(l.title)+"</b></a>"+(l.description?'<div class="meta">'+esc(l.description)+"</div>":"")+'<div class="meta" dir="ltr" style="text-align:right">'+esc(l.url)+"</div>"+(S.linksManage?'<button class="btn red sm noprint" data-ld="'+l.id+'">حذف</button>':"")+"</div>"}).join(""):'<p class="empty">لم تُضف روابط بعد.</p>';
+  return '<div class="card"><h2>روابط لأبحاث ومصادر تعينك على بحثك</h2>'+list+"</div>"+form;
+}
+function bindLinks(){
+  var f=$("#lkf");if(f)f.onsubmit=act(async function(e){e.preventDefault();var d=new FormData(e.target);
+    await api("/links",{method:"POST",body:{title:d.get("t"),url:d.get("u"),description:d.get("d")}});
+    var L=await api("/links");S.links=L.links;toast("تمت إضافة الرابط");render()});
+  document.querySelectorAll("[data-ld]").forEach(function(b){b.onclick=act(async function(){
+    if(!confirm("حذف هذا الرابط؟"))return;await api("/links/"+b.dataset.ld,{method:"DELETE"});
+    var L=await api("/links");S.links=L.links;toast("تم حذف الرابط");render()})});
+}
+
+/* ===== بنك المشاريع / دليل البحث / قالب البحث ===== */
+var LIBT={bank:["بنك المشاريع","ملفات Word وExcel وPDF يستعين بها الطالب"],guide:["دليل البحث","اقرأ الدليل هنا أو حمّله بصيغة PDF"],template:["قالب البحث","نموذج Word جاهز لكتابة بحثك"]};
+var LIBACC={bank:".pdf,.doc,.docx,.xls,.xlsx",guide:".pdf",template:".doc,.docx"};
+var LIBFMT={bank:"PDF أو Word أو Excel",guide:"PDF",template:"Word"};
+function libView(){
+  var sec=S.sec,items=S.lib;
+  var embed=(sec==="guide"&&items.length)?'<div class="card"><h2>'+esc(items[0].title)+'</h2><iframe class="frame" src="/api/library/'+items[0].id+'/file?inline=1" title="دليل البحث"></iframe><p class="meta">إن لم يظهر الدليل في الصفحة على جوالك فاستخدم زر التحميل أدناه.</p></div>':"";
+  var list=items.length?items.map(function(f){return '<div class="item"><div><b>'+esc(f.title)+"</b></div>"+(f.description?'<div class="meta">'+esc(f.description)+"</div>":"")+'<div class="meta">'+esc(f.original_name)+" - "+size(f.size)+" - "+day(f.uploaded_at)+'</div><div style="margin-top:6px"><a class="btn sm" href="/api/library/'+f.id+'/file">تحميل</a>'+(S.libManage?' <button class="btn red sm noprint" data-xd="'+f.id+'">حذف</button>':"")+"</div></div>"}).join(""):'<p class="empty">لا توجد ملفات بعد.</p>';
+  var form=S.libManage?'<div class="card noprint"><h2>رفع '+(sec==="bank"?"ملفات":"ملف")+'</h2><form id="xf"><label>العنوان'+(sec==="bank"?" (اتركه فارغاً عند رفع عدة ملفات ليُستخدم اسم كل ملف)":"")+'<input name="t" maxlength="200"></label><label>وصف مختصر (اختياري)<input name="d" maxlength="1000"></label><label>الملف ('+LIBFMT[sec]+"، حتى 20 ميغابايت"+(sec==="bank"?"، يمكن اختيار عدة ملفات":"")+')<input type="file" name="f" accept="'+LIBACC[sec]+'"'+(sec==="bank"?" multiple":"")+' required></label><div><button class="btn" type="submit">رفع</button></div></form></div>':"";
+  return embed+'<div class="card"><h2>'+(sec==="guide"?"ملفات الدليل":"الملفات المتاحة")+"</h2>"+list+"</div>"+form;
+}
+function bindLib(){
+  var f=$("#xf");if(f)f.onsubmit=act(async function(e){e.preventDefault();var d=new FormData(e.target),fl=e.target.querySelector("input[name=f]").files;
+    if(!fl.length)throw new Error("اختر ملفاً");if(fl.length>10)throw new Error("الحد الأقصى 10 ملفات في المرة الواحدة");
+    var ok=0,fail=[];
+    for(var i=0;i<fl.length;i++){var fd=new FormData();fd.append("section",S.sec);fd.append("title",fl.length===1?(d.get("t")||""):"");fd.append("description",d.get("d")||"");fd.append("file",fl[i]);
+      try{await api("/library",{method:"POST",body:fd});ok++}catch(x){fail.push(fl[i].name+": "+x.message)}}
+    if(ok)toast("تم رفع "+ok+" ملف");if(fail.length)toast("تعذّر رفع: "+fail.join(" | "),true);
+    var B=await api("/library?section="+S.sec);S.lib=B.items;render()});
+  document.querySelectorAll("[data-xd]").forEach(function(b){b.onclick=act(async function(){
+    if(!confirm("حذف هذا الملف نهائياً؟"))return;await api("/library/"+b.dataset.xd,{method:"DELETE"});
+    var B=await api("/library?section="+S.sec);S.lib=B.items;toast("تم حذف الملف");render()})});
 }
 
 /* ===== المشرفون الأكاديميون (للإدارة) ===== */

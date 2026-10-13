@@ -8,11 +8,13 @@ export const PERMS = {
     'research:view_all', 'research:create_any', 'research:edit_any',
     'research:update_status', 'research:grade', 'research:upload_any',
     'users:create_student', 'file:delete', 'research:delete',
+    'library:manage', 'links:manage',
   ],
   admin: [
     'research:view_all', 'research:create_any', 'research:edit_any',
     'research:update_status', 'research:grade', 'research:upload_any',
     'users:create_student', 'users:manage', 'file:download', 'file:delete', 'research:delete', 'supervisors:manage',
+    'library:manage', 'links:manage',
   ],
 };
 export const can = (u, p) => !!u && (PERMS[u.role] || []).includes(p);
@@ -21,6 +23,23 @@ export const STATUSES = ['جديد', 'قيد المراجعة', 'يحتاج إل
 export const CATEGORIES = ['قرآن كريم', 'حديث شريف', 'فقه', 'عقيدة', 'دعوة', 'تربية', 'تاريخ', 'لغة عربية', 'لغة إنجليزية'];
 export const GENDERS = ['طلاب', 'طالبات'];
 export const CAMPUSES = ['دير البلح', 'الشمال'];
+
+// ملفات مكتبة الطلاب: بنك المشاريع ودليل البحث وقالب البحث
+export const LIBRARY_SECTIONS = {
+  bank: ['pdf', 'doc', 'docx', 'xls', 'xlsx'],
+  guide: ['pdf'],
+  template: ['doc', 'docx'],
+};
+export const FILE_SIGS = {
+  pdf: [0x25, 0x50, 0x44, 0x46], docx: [0x50, 0x4b, 3, 4], xlsx: [0x50, 0x4b, 3, 4],
+  doc: [0xd0, 0xcf, 0x11, 0xe0], xls: [0xd0, 0xcf, 0x11, 0xe0],
+};
+export const FILE_TYPES = {
+  pdf: 'application/pdf', doc: 'application/msword',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  xls: 'application/vnd.ms-excel',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+};
 export const STUDENT_EDITABLE = ['جديد', 'يحتاج إلى تعديل'];
 
 export const json = (d, s = 200, h = {}) =>
