@@ -12,12 +12,15 @@ export const PERMS = {
   admin: [
     'research:view_all', 'research:create_any', 'research:edit_any',
     'research:update_status', 'research:grade', 'research:upload_any',
-    'users:create_student', 'users:manage', 'file:download',
+    'users:create_student', 'users:manage', 'file:download', 'supervisors:manage',
   ],
 };
 export const can = (u, p) => !!u && (PERMS[u.role] || []).includes(p);
 
 export const STATUSES = ['جديد', 'قيد المراجعة', 'يحتاج إلى تعديل', 'معتمد', 'مؤرشف'];
+export const CATEGORIES = ['قرآن كريم', 'حديث شريف', 'فقه', 'عقيدة', 'دعوة', 'تربية', 'تاريخ', 'لغة عربية', 'لغة إنجليزية'];
+export const GENDERS = ['طلاب', 'طالبات'];
+export const CAMPUSES = ['دير البلح', 'الشمال'];
 export const STUDENT_EDITABLE = ['جديد', 'يحتاج إلى تعديل'];
 
 export const json = (d, s = 200, h = {}) =>

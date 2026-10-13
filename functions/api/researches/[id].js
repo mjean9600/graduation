@@ -1,4 +1,4 @@
-import { json, err, can, STATUSES, STUDENT_EDITABLE, getResearch, audit } from '../../_lib.js';
+import { json, err, can, STATUSES, STUDENT_EDITABLE, CATEGORIES, GENDERS, CAMPUSES, getResearch, audit } from '../../_lib.js';
 
 export async function onRequestGet({ env, data, params }) {
   const r = await getResearch(env, params.id, data.user);
@@ -27,11 +27,25 @@ export async function onRequestPatch({ request, env, data, params }) {
     if (g !== null && !(g >= 0 && g <= 100)) return err('الدرجة من 0 إلى 100');
     set.push('grade=?'); vals.push(g);
   }
-  if (b.title !== undefined || b.abstract !== undefined) {
+  if (['title', 'abstract', 'category', 'supervisor', 'gender', 'campus'].some((k) => b[k] !== undefined)) {
     const allowed = u.role === 'student' ? STUDENT_EDITABLE.includes(r.status) : can(u, 'research:edit_any');
     if (!allowed) return err('لا يمكن تعديل البحث في حالته الحالية', 403);
     if (b.title !== undefined) { const t = String(b.title).trim(); if (!t || t.length > 300) return err('العنوان غير صالح'); set.push('title=?'); vals.push(t); }
     if (b.abstract !== undefined) { const a = String(b.abstract).trim(); if (!a || a.length > 3000) return err('الملخص غير صالح'); set.push('abstract=?'); vals.push(a); }
+    if (b.category !== undefined) { if (!CATEGORIES.includes(b.category)) return err('تصنيف غير صالح'); set.push('category=?'); vals.push(b.category); }
+    if (b.supervisor !== undefined) {
+      const s = String(b.supervisor).trim();
+      if (s !== r.supervisor) {
+        const ok = await env.DB.prepare('SELECT 1 FROM supervisors WHERE name=? AND active=1').bind(s).first();
+        if (!ok) return err('اختر المشرف الأكاديمي من القائمة');
+      }
+      set.push('supervisor=?'); vals.push(s);
+    }
+    if (b.gender !== undefined || b.campus !== undefined) {
+      if (!can(u, 'research:edit_any')) return err('غير مصرّح', 403);
+      if (b.gender !== undefined) { if (!GENDERS.includes(b.gender)) return err('تصنيف الطلاب غير صالح'); set.push('gender=?'); vals.push(b.gender); }
+      if (b.campus !== undefined) { if (!CAMPUSES.includes(b.campus)) return err('مكان الدراسة غير صالح'); set.push('campus=?'); vals.push(b.campus); }
+    }
   }
   if (!set.length) return err('لا تغييرات');
   set.push('updated_at=?'); vals.push(Date.now());

@@ -17,7 +17,7 @@ export async function onRequest(ctx) {
   const m = (request.headers.get('cookie') || '').match(/(?:^|; )sid=([a-f0-9]+)/);
   if (!m) return err('يجب تسجيل الدخول', 401);
   const u = await env.DB.prepare(
-    `SELECT u.id,u.username,u.name,u.role,u.must_change
+    `SELECT u.id,u.username,u.name,u.role,u.must_change,u.gender,u.campus
      FROM sessions s JOIN users u ON u.id=s.user_id
      WHERE s.token_hash=? AND s.expires_at>? AND u.active=1`
   ).bind(await sha256(m[1]), Date.now()).first();
