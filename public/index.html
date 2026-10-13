@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="logo.png">
 <title>بوابة أبحاث التخرج | كلية الدعوة الإسلامية</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap">
 <style>
@@ -91,7 +92,7 @@ async function api(path,opt){
 function act(fn){return async function(ev){try{await fn(ev)}catch(e){toast(e.message,true)}}}
 
 /* ===== الإطار العام ===== */
-function header(){return '<div class="top"><div class="wrap"><div class="brand"><img class="logo" src="logo.jpg" alt="" onerror="this.style.display=\'none\'"><span>كلية الدعوة الإسلامية</span></div><span class="slogan">معًا .. نحو مستقبل أفضل</span></div></div>'}
+function header(){return '<div class="top"><div class="wrap"><div class="brand"><img class="logo" src="logo.png" alt="" onerror="this.style.display=\'none\'"><span>كلية الدعوة الإسلامية</span></div><span class="slogan">معًا .. نحو مستقبل أفضل</span></div></div>'}
 function navHtml(){
   var t="";
   if(S.me&&!S.me.mustChange){
