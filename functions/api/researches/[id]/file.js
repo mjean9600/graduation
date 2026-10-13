@@ -1,60 +1,72 @@
-import { json, err, can, getResearch, randomToken, audit, STUDENT_EDITABLE } from '../../../_lib.js';
+// أدوات مشتركة + مصفوفة الصلاحيات
+const enc = new TextEncoder();
 
-const MAX = 20 * 1024 * 1024; // حد KV لكل قيمة 25 ميغابايت
-const SIGS = { pdf: [0x25, 0x50, 0x44, 0x46], docx: [0x50, 0x4b, 3, 4], doc: [0xd0, 0xcf, 0x11, 0xe0] };
-const TYPES = {
-  pdf: 'application/pdf', doc: 'application/msword',
-  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+// ===== مصفوفة الصلاحيات: عدّلها هنا فقط =====
+export const PERMS = {
+  student: ['research:create_own', 'research:upload_own'],
+  staff: [
+    'research:view_all', 'research:create_any', 'research:edit_any',
+    'research:update_status', 'research:grade', 'research:upload_any',
+    'users:create_student', 'file:delete', 'research:delete',
+  ],
+  admin: [
+    'research:view_all', 'research:create_any', 'research:edit_any',
+    'research:update_status', 'research:grade', 'research:upload_any',
+    'users:create_student', 'users:manage', 'file:download', 'file:delete', 'research:delete', 'supervisors:manage',
+  ],
+};
+export const can = (u, p) => !!u && (PERMS[u.role] || []).includes(p);
+
+export const STATUSES = ['جديد', 'قيد المراجعة', 'يحتاج إلى تعديل', 'معتمد', 'مؤرشف'];
+export const CATEGORIES = ['قرآن كريم', 'حديث شريف', 'فقه', 'عقيدة', 'دعوة', 'تربية', 'تاريخ', 'لغة عربية', 'لغة إنجليزية'];
+export const GENDERS = ['طلاب', 'طالبات'];
+export const CAMPUSES = ['دير البلح', 'الشمال'];
+export const STUDENT_EDITABLE = ['جديد', 'يحتاج إلى تعديل'];
+
+export const json = (d, s = 200, h = {}) =>
+  new Response(JSON.stringify(d), {
+    status: s,
+    headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...h },
+  });
+export const err = (m, s = 400) => json({ error: m }, s);
+
+const b64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf)));
+const unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+const same = (a, b) => {
+  if (a.length !== b.length) return false;
+  let r = 0;
+  for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return r === 0;
 };
 
-// رفع نسخة جديدة (الطالب لبحثه، الموظف لأي بحث). النسخ القديمة تبقى محفوظة.
-export async function onRequestPost({ request, env, data, params }) {
-  const u = data.user;
-  const r = await getResearch(env, params.id, u);
-  if (!r) return err('غير موجود', 404);
-  const ok = u.role === 'student'
-    ? can(u, 'research:upload_own') && STUDENT_EDITABLE.includes(r.status)
-    : can(u, 'research:upload_any');
-  if (!ok) return err('لا يمكن رفع ملف لهذا البحث في حالته الحالية', 403);
-
-  let f; try { f = (await request.formData()).get('file'); } catch { return err('طلب غير صالح'); }
-  if (!f || typeof f === 'string') return err('اختر ملفاً');
-  if (f.size === 0 || f.size > MAX) return err('حجم الملف يجب أن يكون أقل من 20 ميغابايت');
-  const ext = (f.name.split('.').pop() || '').toLowerCase();
-  if (!SIGS[ext]) return err('الأنواع المسموحة: PDF أو Word');
-  const head = new Uint8Array(await f.slice(0, 4).arrayBuffer());
-  if (!SIGS[ext].every((b, i) => head[i] === b)) return err('محتوى الملف لا يطابق نوعه');
-
-  const v = (await env.DB.prepare('SELECT COALESCE(MAX(version),0)+1 AS v FROM files WHERE research_id=?').bind(r.id).first()).v;
-  const key = `researches/${r.id}/v${v}-${randomToken(8)}.${ext}`;
-  await env.FILES.put(key, await f.arrayBuffer());
-  await env.DB.prepare('INSERT INTO files(research_id,version,r2_key,original_name,size,uploaded_by,uploaded_at) VALUES(?,?,?,?,?,?,?)')
-    .bind(r.id, v, key, f.name.slice(0, 200), f.size, u.id, Date.now()).run();
-  // إذا كان البحث "يحتاج إلى تعديل" وأعاد الطالب رفعه ينتقل لـ "قيد المراجعة"
-  const next = u.role === 'student' && r.status === 'يحتاج إلى تعديل' ? 'قيد المراجعة' : r.status;
-  await env.DB.prepare('UPDATE researches SET status=?, updated_at=? WHERE id=?').bind(next, Date.now(), r.id).run();
-  await audit(env, u.id, 'file:upload', `${r.id} v${v}`);
-  return json({ version: v }, 201);
+export async function hashPassword(pw, salt = crypto.getRandomValues(new Uint8Array(16))) {
+  const key = await crypto.subtle.importKey('raw', enc.encode(pw), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', hash: 'SHA-256', salt, iterations: 100000 }, key, 256);
+  return b64(salt) + ':' + b64(bits);
+}
+export async function verifyPassword(pw, stored) {
+  const h = await hashPassword(pw, unb64(stored.split(':')[0]));
+  return same(h, stored);
+}
+export async function sha256(s) {
+  const d = await crypto.subtle.digest('SHA-256', enc.encode(s));
+  return [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+export const randomToken = (n = 32) =>
+  [...crypto.getRandomValues(new Uint8Array(n))].map((b) => b.toString(16).padStart(2, '0')).join('');
+export function genPassword() {
+  const a = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from(crypto.getRandomValues(new Uint8Array(10)), (b) => a[b % a.length]).join('');
 }
 
-// التنزيل لإدارة الكلية فقط، ويُسجَّل في سجل التدقيق. ?v=رقم النسخة (الافتراضي الأحدث)
-export async function onRequestGet({ request, env, data, params }) {
-  const u = data.user;
-  if (!can(u, 'file:download')) return err('التنزيل لإدارة الكلية فقط', 403);
-  const r = await getResearch(env, params.id, u);
-  if (!r) return err('غير موجود', 404);
-  const v = new URL(request.url).searchParams.get('v');
-  const row = v
-    ? await env.DB.prepare('SELECT * FROM files WHERE research_id=? AND version=?').bind(r.id, Number(v)).first()
-    : await env.DB.prepare('SELECT * FROM files WHERE research_id=? ORDER BY version DESC LIMIT 1').bind(r.id).first();
-  if (!row) return err('لا يوجد ملف', 404);
-  const obj = await env.FILES.get(row.r2_key, { type: 'stream' });
-  if (!obj) return err('الملف غير موجود في التخزين', 404);
-  await audit(env, u.id, 'file:download', `${r.id} v${row.version}`);
-  const ext = (row.original_name.split('.').pop() || '').toLowerCase();
-  return new Response(obj, { headers: {
-    'content-type': TYPES[ext] || 'application/octet-stream',
-    'content-disposition': `attachment; filename*=UTF-8''${encodeURIComponent(row.original_name)}`,
-    'x-content-type-options': 'nosniff', 'cache-control': 'private, no-store',
-  } });
+// الطالب لا يرى إلا بحثه، وأي بحث آخر يظهر له "غير موجود"
+export async function getResearch(env, id, user) {
+  const r = await env.DB.prepare('SELECT * FROM researches WHERE id=?').bind(id).first();
+  if (!r) return null;
+  if (user.role === 'student' && r.owner_id !== user.id) return null;
+  return r;
 }
+export const audit = (env, userId, action, target) =>
+  env.DB.prepare('INSERT INTO audit(user_id,action,target,at) VALUES(?,?,?,?)')
+    .bind(userId, action, String(target ?? ''), Date.now()).run();
