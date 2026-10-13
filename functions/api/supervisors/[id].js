@@ -11,3 +11,13 @@ export async function onRequestPatch({ request, env, data, params }) {
   await audit(env, u.id, 'supervisor:' + b.action, params.id);
   return json({ ok: true });
 }
+
+// حذف مشرف نهائياً من القائمة (الأبحاث السابقة تحتفظ باسمه نصاً) — للإدارة فقط
+export async function onRequestDelete({ env, data, params }) {
+  const u = data.user;
+  if (!can(u, 'supervisors:manage')) return err('غير مصرّح', 403);
+  const r = await env.DB.prepare('DELETE FROM supervisors WHERE id=?').bind(params.id).run();
+  if (!r.meta.changes) return err('غير موجود', 404);
+  await audit(env, u.id, 'supervisor:delete', params.id);
+  return json({ ok: true });
+}
