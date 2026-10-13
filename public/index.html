@@ -11,7 +11,7 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.8 Cairo,Tahoma,sans-serif;padding-bottom:env(safe-area-inset-bottom,0)}
 .wrap{max-width:1100px;margin:0 auto;padding:0 20px}
-.wrap.pg{padding-top:32px;padding-bottom:90px}
+.wrap.pg{padding-top:32px;padding-bottom:0}
 .top{background:#f9fbfa;padding:12px 0;padding-top:calc(12px + env(safe-area-inset-top,0px))}
 .top .wrap{display:flex;justify-content:space-between;align-items:center;gap:12px}
 .brand{display:flex;align-items:center;gap:14px;color:var(--green);font-weight:700;font-size:1.5rem}
@@ -118,7 +118,7 @@ function render(){
   else if(S.view==="sups"){hero=["المشرفون الأكاديميون","القائمة التي يختار منها الطلاب عند رفع البحث"];content=supsView();after=bindSups}
   else if(S.view==="detail"&&S.detail){hero=["تفاصيل البحث",S.detail.research.title];content=detailView();after=bindDetail}
   else{hero=["أبحاث التخرج","كلية الدعوة الإسلامية - قسم أبحاث التخرج"];content=listView();after=bindList}
-  $("#root").innerHTML=header()+navHtml()+heroHtml(hero[0],hero[1])+'<main class="wrap pg">'+content+'</main><footer class="noprint">جميع الحقوق محفوظة - كلية الدعوة الإسلامية - غزة</footer>';
+  $("#root").innerHTML=header()+navHtml()+heroHtml(hero[0],hero[1])+'<main class="wrap pg" style="padding-top:32px">'+content+'<div style="height:80px" aria-hidden="true"></div></main><footer class="noprint">جميع الحقوق محفوظة - كلية الدعوة الإسلامية - غزة</footer>';
   document.querySelectorAll(".tabs a").forEach(function(a){a.onclick=act(function(){return go(a.dataset.v)})});
   var o=$("#out");if(o)o.onclick=act(async function(){await api("/logout",{method:"POST"});S.me=null;S.view="list";render()});
   var p=$("#pwb");if(p)p.onclick=function(){S.view="pw";render()};
@@ -152,7 +152,7 @@ function supOpts(cur){var n=activeSups().map(function(s){return s.name});if(cur&
 function listView(){
   var years=Array.from(new Set(S.list.map(function(p){return String(p.year)}))).sort().reverse();
   var cats='<ul class="cats"><li><button aria-pressed="'+(S.cat==="الكل")+'" data-c="الكل">كل التصنيفات <span>'+S.list.length+"</span></button></li>"+CATS.map(function(c){var n=S.list.filter(function(p){return p.category===c}).length;return '<li><button aria-pressed="'+(S.cat===c)+'" data-c="'+c+'">'+c+" <span>"+n+"</span></button></li>"}).join("")+"</ul>";
-  return '<div class="layout"><aside>'+cats+'</aside><section class="card"><div class="filters"><input id="q" placeholder="ابحث بالعنوان أو الطالب أو المشرف" value="'+esc(S.q)+'"><select id="fy">'+opts(years,S.year,"كل السنوات")+'</select><select id="fg">'+opts(GENDERS,S.gen,"طلاب وطالبات")+'</select><select id="fc">'+opts(CAMPUSES,S.camp,"كل الأماكن")+'</select><select id="fs">'+opts(ST,S.st,"كل الحالات")+'</select></div><div id="rows">'+rowsHtml()+"</div></section></div>";
+  return '<div class="layout"><aside>'+cats+'</aside><section class="card"><div class="filters"><input id="q" placeholder="ابحث بالعنوان أو الطالب أو المشرف" value="'+esc(S.q)+'"><select id="fy">'+opts(years,S.year,"سنة البحث")+'</select><select id="fg">'+opts(GENDERS,S.gen,"طلاب وطالبات")+'</select><select id="fc">'+opts(CAMPUSES,S.camp,"مكان الدراسة")+'</select><select id="fs">'+opts(ST,S.st,"الحالة")+'</select></div><div id="rows">'+rowsHtml()+"</div></section></div>";
 }
 function rowsHtml(){
   var items=S.list.filter(function(p){return(S.cat==="الكل"||p.category===S.cat)&&(S.year==="الكل"||String(p.year)===S.year)&&(S.gen==="الكل"||p.gender===S.gen)&&(S.camp==="الكل"||p.campus===S.camp)&&(S.st==="الكل"||p.status===S.st)&&(p.title+" "+p.students+" "+p.supervisor+" "+p.year).indexOf(S.q)>-1});
