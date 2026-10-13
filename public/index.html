@@ -87,9 +87,10 @@ async function api(path,opt){
   opt=opt||{};var h={},body=opt.body;
   if(body&&!(body instanceof FormData)){h["content-type"]="application/json";body=JSON.stringify(body)}
   var r;try{r=await fetch("/api"+path,{method:opt.method||"GET",body:body,headers:h,credentials:"same-origin"})}catch(e){throw new Error("تعذر الاتصال بالخادم")}
-  var d={};try{d=await r.json()}catch(e){}
+  var d={},bad=false;try{d=await r.json()}catch(e){bad=true}
   if(r.status===401&&path!=="/login"&&path!=="/me"){S.me=null;render()}
   if(!r.ok){throw new Error(d.error||"حدث خطأ")}
+  if(bad)throw new Error("استجابة غير متوقعة من الخادم (تحقق من ملفات functions على GitHub)");
   return d;
 }
 function act(fn){return async function(ev){try{await fn(ev)}catch(e){toast(e.message,true)}}}
@@ -131,7 +132,7 @@ async function go(v){
   if(v==="add"||v==="sups"){S.sups=(await api("/supervisors"+(v==="sups"?"?all=1":""))).supervisors}
   S.view=v;render();
 }
-async function openDetail(id){if(!activeSups().length)S.sups=(await api("/supervisors")).supervisors;S.detail=await api("/researches/"+id);S.edit=false;S.view="detail";render()}
+async function openDetail(id){if(!activeSups().length)S.sups=(await api("/supervisors")).supervisors||[];var d=await api("/researches/"+id);if(!d||!d.research)throw new Error("استجابة غير متوقعة من الخادم. تأكد أن ملف functions/api/researches/[id].js على GitHub هو الصحيح");S.detail=d;S.edit=false;S.view="detail";render()}
 
 /* ===== الدخول وكلمة المرور ===== */
 function loginView(){return '<div class="card login"><form id="lf"><label>اسم المستخدم (الرقم الجامعي)<input name="u" autocomplete="username" required></label><label>كلمة المرور<input name="p" type="password" autocomplete="current-password" required></label><button class="btn" type="submit">تسجيل الدخول</button></form></div>'}
