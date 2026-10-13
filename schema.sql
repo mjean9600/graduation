@@ -60,3 +60,23 @@ CREATE TABLE IF NOT EXISTS supervisors (
   name TEXT NOT NULL UNIQUE,
   active INTEGER NOT NULL DEFAULT 1
 );
+
+CREATE TABLE IF NOT EXISTS links (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  url TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS library (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  section TEXT NOT NULL CHECK (section IN ('bank','guide','template')),
+  title TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  file_key TEXT NOT NULL,
+  original_name TEXT NOT NULL,
+  size INTEGER NOT NULL,
+  uploaded_by INTEGER NOT NULL,
+  uploaded_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_lib_section ON library(section);
