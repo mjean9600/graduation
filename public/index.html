@@ -11,6 +11,7 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.8 Cairo,Tahoma,sans-serif;padding-bottom:env(safe-area-inset-bottom,0)}
 .wrap{max-width:1100px;margin:0 auto;padding:0 20px}
+.wrap.pg{padding-top:32px;padding-bottom:90px}
 .top{background:#f9fbfa;padding:12px 0;padding-top:calc(12px + env(safe-area-inset-top,0px))}
 .top .wrap{display:flex;justify-content:space-between;align-items:center;gap:12px}
 .brand{display:flex;align-items:center;gap:14px;color:var(--green);font-weight:700;font-size:1.5rem}
@@ -26,7 +27,7 @@ nav.bar .wrap{display:flex;justify-content:space-between;align-items:center;gap:
 .hero{background:linear-gradient(90deg,var(--teal),var(--green));color:#fff;padding:34px 0}
 .hero h1{margin:0;font-size:2rem;font-weight:700;line-height:1.5}
 .hero p{margin:4px 0 0;opacity:.92}
-#root{min-height:100vh;display:flex;flex-direction:column}#root>main{flex:1;width:100%;padding:26px 20px 70px}
+#root{min-height:100vh;display:flex;flex-direction:column}#root>main{flex:1;width:100%}
 :focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:22px}
 .card+.card{margin-top:18px}
@@ -117,7 +118,7 @@ function render(){
   else if(S.view==="sups"){hero=["المشرفون الأكاديميون","القائمة التي يختار منها الطلاب عند رفع البحث"];content=supsView();after=bindSups}
   else if(S.view==="detail"&&S.detail){hero=["تفاصيل البحث",S.detail.research.title];content=detailView();after=bindDetail}
   else{hero=["أبحاث التخرج","كلية الدعوة الإسلامية - قسم أبحاث التخرج"];content=listView();after=bindList}
-  $("#root").innerHTML=header()+navHtml()+heroHtml(hero[0],hero[1])+'<main class="wrap">'+content+'</main><footer class="noprint">جميع الحقوق محفوظة - كلية الدعوة الإسلامية - غزة</footer>';
+  $("#root").innerHTML=header()+navHtml()+heroHtml(hero[0],hero[1])+'<main class="wrap pg">'+content+'</main><footer class="noprint">جميع الحقوق محفوظة - كلية الدعوة الإسلامية - غزة</footer>';
   document.querySelectorAll(".tabs a").forEach(function(a){a.onclick=act(function(){return go(a.dataset.v)})});
   var o=$("#out");if(o)o.onclick=act(async function(){await api("/logout",{method:"POST"});S.me=null;S.view="list";render()});
   var p=$("#pwb");if(p)p.onclick=function(){S.view="pw";render()};
