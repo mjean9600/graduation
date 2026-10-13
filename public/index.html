@@ -26,7 +26,7 @@ nav.bar .wrap{display:flex;justify-content:space-between;align-items:center;gap:
 .hero{background:linear-gradient(90deg,var(--teal),var(--green));color:#fff;padding:34px 0}
 .hero h1{margin:0;font-size:2rem;font-weight:700;line-height:1.5}
 .hero p{margin:4px 0 0;opacity:.92}
-main{padding:26px 20px 50px}
+#root{min-height:100vh;display:flex;flex-direction:column}#root>main{flex:1;width:100%;padding:26px 20px 70px}
 :focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:22px}
 .card+.card{margin-top:18px}
@@ -62,7 +62,7 @@ th{color:var(--mute);font-weight:600}
 .login{max-width:420px;margin:0 auto}
 .toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom,0px));inset-inline:0;margin:auto;width:max-content;max-width:90%;background:var(--green);color:#fff;padding:8px 20px;border-radius:8px;z-index:9}
 .toast.bad{background:var(--red)}
-footer{background:var(--green);color:#cfe6e1;text-align:center;padding:14px;font-size:.9rem}
+footer{background:var(--green);color:#cfe6e1;text-align:center;margin-top:30px;padding:22px 14px calc(22px + env(safe-area-inset-bottom,0px));font-size:.9rem}
 mono{font-family:Consolas,monospace;direction:ltr;unicode-bidi:plaintext}
 @media print{body *{visibility:hidden}#creds,#creds *{visibility:visible}#creds{position:absolute;inset-inline:0;top:0}.noprint{display:none!important}}
 </style>
@@ -135,7 +135,7 @@ async function openDetail(id){if(!activeSups().length)S.sups=(await api("/superv
 /* ===== الدخول وكلمة المرور ===== */
 function loginView(){return '<div class="card login"><form id="lf"><label>اسم المستخدم (الرقم الجامعي)<input name="u" autocomplete="username" required></label><label>كلمة المرور<input name="p" type="password" autocomplete="current-password" required></label><button class="btn" type="submit">تسجيل الدخول</button></form></div>'}
 function bindLogin(){$("#lf").onsubmit=act(async function(e){e.preventDefault();var f=new FormData(e.target);
-  await api("/login",{method:"POST",body:{username:f.get("u"),password:f.get("p")}});await start()})}
+  await api("/login",{method:"POST",body:{username:f.get("u"),password:f.get("p")}});await start(true)})}
 function pwView(){return '<div class="card login"><form id="pf"><label>كلمة المرور الحالية<input name="o" type="password" autocomplete="current-password" required></label><label>كلمة المرور الجديدة (8 أحرف على الأقل)<input name="n" type="password" autocomplete="new-password" minlength="8" required></label><label>تأكيد كلمة المرور الجديدة<input name="c" type="password" autocomplete="new-password" required></label><div><button class="btn" type="submit">حفظ كلمة المرور</button></div></form></div>'}
 function bindPw(){$("#pf").onsubmit=act(async function(e){e.preventDefault();var f=new FormData(e.target);
   if(f.get("n")!==f.get("c"))throw new Error("تأكيد كلمة المرور غير مطابق");
@@ -251,9 +251,9 @@ function bindSups(){
     await api("/supervisors/"+b.dataset.s,{method:"PATCH",body:{action:b.dataset.a}});S.sups=(await api("/supervisors?all=1")).supervisors;render()})});
 }
 
-async function start(){
-  try{S.me=await api("/me")}catch(e){S.me=null}
-  if(S.me&&!S.me.mustChange){try{S.list=(await api("/researches")).researches}catch(e){S.list=[]}try{S.sups=(await api("/supervisors")).supervisors}catch(e){S.sups=[]}}
+async function start(fromLogin){
+  try{S.me=await api("/me")}catch(e){S.me=null;if(fromLogin)toast("تم التحقق من كلمة المرور لكن تعذّر تحميل الحساب: "+e.message,true)}
+  if(S.me&&!S.me.mustChange){try{S.list=(await api("/researches")).researches}catch(e){S.list=[];toast("تعذّر تحميل الأبحاث: "+e.message,true)}try{S.sups=(await api("/supervisors")).supervisors}catch(e){S.sups=[]}}
   S.view="list";render();
 }
 start();
