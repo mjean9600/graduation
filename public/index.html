@@ -13,6 +13,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.8 Cairo,Taho
 .wrap{max-width:1100px;margin:0 auto;padding:0 20px}
 .wrap.pg{padding-top:32px;padding-bottom:0}
 .hbtns{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}.hb{border:0;border-radius:8px;padding:6px 16px;font:600 .9rem Cairo,sans-serif;cursor:pointer;color:#fff}.hb.g{background:var(--gold);color:#3b2d00}.hb.b{background:var(--blue)}.hb.r{background:var(--red)}.hb.o{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.6)}
+.account-tools{display:flex;flex-direction:column;align-items:stretch;gap:6px;min-width:300px}.quick-links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.quick-links .hb{padding:3px 8px;border:1px solid rgba(255,255,255,.22);font-size:.78rem;line-height:1.6;box-shadow:0 1px 2px rgba(0,0,0,.08)}.quick-links .hb:hover{filter:brightness(1.08);transform:translateY(-1px)}
 .item{padding:12px 4px;border-bottom:1px solid var(--line)}.item:last-child{border-bottom:0}.frame{width:100%;height:75vh;border:1px solid var(--line);border-radius:8px;background:#fff}
 .top{background:#f9fbfa;padding:12px 0;padding-top:calc(12px + env(safe-area-inset-top,0px))}
 .top .wrap{display:flex;justify-content:space-between;align-items:center;gap:12px}
@@ -36,6 +37,7 @@ nav.bar .wrap{display:flex;justify-content:space-between;align-items:center;gap:
 .card h2{margin:0 0 12px;font-size:1.2rem;color:var(--green)}
 .layout{display:grid;grid-template-columns:220px 1fr;gap:22px}
 @media(max-width:780px){.layout{grid-template-columns:1fr}.brand{font-size:1.15rem}.logo{width:46px;height:46px}.slogan{display:none}.hero h1{font-size:1.5rem}}
+@media(max-width:780px){nav.bar .wrap{align-items:stretch;flex-direction:column;padding-top:8px;padding-bottom:10px}.account-tools{min-width:0;width:100%}.chip{justify-content:center;border-radius:10px;padding:6px 8px}.quick-links{grid-template-columns:repeat(4,minmax(0,1fr))}.quick-links .hb{padding:4px 3px;font-size:.7rem}}
 .cats{list-style:none;margin:0;padding:0;display:grid;gap:4px}
 .cats button{width:100%;text-align:right;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px 12px;font:inherit;color:var(--ink);cursor:pointer;display:flex;justify-content:space-between}
 .cats button[aria-pressed=true]{background:var(--green);color:#fff;border-color:var(--green)}
@@ -109,12 +111,12 @@ function navHtml(){
     if(can("supervisors:manage"))tabs.push(["sups","المشرفون"]);
     t=tabs.map(function(x){var cur=S.view===x[0]||(S.view==="detail"&&x[0]==="list");return '<a data-v="'+x[0]+'"'+(cur?' aria-current="page"':"")+' tabindex="0">'+x[1]+"</a>"}).join("");
   }
-  var chip=S.me?'<div class="chip"><span>'+esc(S.me.name)+" - "+ROLE[S.me.role]+'</span>'+(S.me.mustChange?"":'<button id="pwb">كلمة المرور</button>')+'<button id="out">خروج</button></div>':"";
+  var quick=S.me&&!S.me.mustChange?'<div class="quick-links">'+[["links","روابط بحثية مساعدة","g"],["bank","بنك المشاريع","b"],["guide","دليل البحث","r"],["template","قالب البحث","o"]].map(function(x){return '<button class="hb '+x[2]+'" data-h="'+x[0]+'">'+x[1]+"</button>"}).join("")+"</div>":"";
+  var chip=S.me?'<div class="account-tools"><div class="chip"><span>'+esc(S.me.name)+" - "+ROLE[S.me.role]+'</span>'+(S.me.mustChange?"":'<button id="pwb">كلمة المرور</button>')+'<button id="out">خروج</button></div>'+quick+'</div>':"";
   return '<nav class="bar noprint"><div class="wrap"><div class="tabs">'+t+"</div>"+chip+"</div></nav>";
 }
 function heroHtml(t,s){
   var b="";
-  if(S.me&&!S.me.mustChange&&S.view!=="pw")b='<div class="hbtns">'+[["links","روابط بحثية مساعدة","g"],["bank","بنك المشاريع","b"],["guide","دليل البحث","r"],["template","قالب البحث","o"]].map(function(x){return '<button class="hb '+x[2]+'" data-h="'+x[0]+'">'+x[1]+"</button>"}).join("")+"</div>";
   return '<div class="hero noprint"><div class="wrap"><h1>'+esc(t)+"</h1>"+(s?"<p>"+esc(s)+"</p>":"")+b+"</div></div>";
 }
 function render(){
