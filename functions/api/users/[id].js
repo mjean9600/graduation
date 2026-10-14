@@ -28,11 +28,19 @@ export async function onRequestPatch({ request, env, data, params }) {
 
 export async function onRequestDelete({ env, data, params }) {
   const u = data.user;
-  if (!can(u, 'users:manage') || u.role !== 'admin') return err('حذف الحسابات من صلاحية إدارة الكلية فقط', 403);
-  const t = await env.DB.prepare('SELECT id,username,role FROM users WHERE id=?').bind(params.id).first();
+  const isRootAdmin = u?.role === 'admin' && u?.username === 'admin';
+  const isCollegeAdmin = u?.role === 'admin' && can(u, 'users:manage') && !isRootAdmin;
+  if (!isRootAdmin && !isCollegeAdmin) return err('غير مصرّح بحذف الحسابات', 403);
+
+  const t = await env.DB.prepare('SELECT id,username,name,role FROM users WHERE id=?').bind(params.id).first();
   if (!t) return err('الحساب غير موجود', 404);
-  if (t.id === u.id) return err('لا يمكنك حذف الحساب الذي تستخدمه حالياً');
-  if (t.role === 'admin') return err('لا يمكن حذف حساب إدارة الكلية من هذه الواجهة');
+  if (String(t.id) === String(u.id)) return err('لا يمكنك حذف الحساب الذي تستخدمه حالياً');
+
+  if (!isRootAdmin) {
+    if (t.role !== 'staff') return err('إدارة الكلية تستطيع حذف حسابات المشرفين الأكاديميين فقط', 403);
+    const supervisor = await env.DB.prepare('SELECT id FROM supervisors WHERE name=? LIMIT 1').bind(t.name).first();
+    if (!supervisor) return err('هذا الحساب ليس مرتبطاً بمشرف أكاديمي', 403);
+  }
 
   const owned = await env.DB.prepare('SELECT COUNT(*) AS n FROM researches WHERE owner_id=?').bind(t.id).first();
   const uploaded = await env.DB.prepare('SELECT COUNT(*) AS n FROM files WHERE uploaded_by=?').bind(t.id).first();
