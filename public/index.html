@@ -238,7 +238,7 @@ function bindAdd(){$("#af").onsubmit=act(async function(e){e.preventDefault();va
 function usersView(){
   var mg=can("users:manage");
   var cr=S.creds?'<div class="card" id="creds"><h2>كلمات المرور المؤقتة</h2><p class="warn">تظهر هذه الكلمات مرة واحدة فقط. سلّمها للطلاب ثم احذف هذه الصفحة. سيُطلب من كل طالب تغييرها عند أول دخول.</p><div class="scroll"><table><tr><th>اسم المستخدم</th><th>الاسم</th><th>كلمة المرور المؤقتة</th></tr>'+S.creds.map(function(c){return "<tr><td><mono>"+esc(c.username)+"</mono></td><td>"+esc(c.name||"")+"</td><td><mono>"+esc(c.tempPassword)+"</mono></td></tr>"}).join("")+'</table></div><div class="noprint" style="margin-top:12px"><button class="btn" id="cp">نسخ الكل</button> <button class="btn ghost" id="pr">طباعة</button> <button class="btn ghost" id="cc">إخفاء</button></div></div>':"";
-  var users='<div class="card noprint"><h2>الحسابات ('+S.users.length+')</h2><div class="scroll"><table><tr><th>اسم المستخدم</th><th>الاسم</th><th>الدور</th><th>التصنيف</th><th>مكان الدراسة</th><th>الحالة</th><th></th></tr>'+S.users.map(function(u){return "<tr><td><mono>"+esc(u.username)+"</mono></td><td>"+esc(u.name)+"</td><td>"+ROLE[u.role]+"</td><td>"+esc(u.gender||"-")+"</td><td>"+esc(u.campus||"-")+"</td><td>"+(u.active?"فعّال":"موقوف")+(u.must_change&&u.active?" (لم يغيّر كلمة المرور)":"")+'</td><td><button class="btn ghost sm" data-a="reset" data-id="'+u.id+'">إعادة تعيين</button> <button class="btn ghost sm" data-a="'+(u.active?"deactivate":"activate")+'" data-id="'+u.id+'">'+(u.active?"إيقاف":"تفعيل")+"</button></td></tr>"}).join("")+"</table></div></div>";
+  var users='<div class="card noprint"><h2>الحسابات ('+S.users.length+')</h2><div class="scroll"><table><tr><th>اسم المستخدم</th><th>الاسم</th><th>الدور</th><th>التصنيف</th><th>مكان الدراسة</th><th>الحالة</th><th></th></tr>'+S.users.map(function(u){return "<tr><td><mono>"+esc(u.username)+"</mono></td><td>"+esc(u.name)+"</td><td>"+ROLE[u.role]+"</td><td>"+esc(u.gender||"-")+"</td><td>"+esc(u.campus||"-")+"</td><td>"+(u.active?"فعّال":"موقوف")+(u.must_change&&u.active?" (لم يغيّر كلمة المرور)":"")+'</td><td><button class="btn ghost sm" data-a="reset" data-id="'+u.id+'">إعادة تعيين</button> <button class="btn ghost sm" data-a="'+(u.active?"deactivate":"activate")+'" data-id="'+u.id+'">'+(u.active?"إيقاف":"تفعيل")+"</button>"+(mg&&u.role!=="admin"&&String(u.id)!==String(S.me.id)?' <button class="btn red sm" data-a="delete" data-id="'+u.id+'">حذف</button>':"")+"</td></tr>"}).join("")+"</table></div></div>";
   return cr+'<div class="card noprint"><h2>إضافة حسابات</h2><form id="uf">'+(mg?'<label>الدور<select name="r" id="ur"><option value="student">طالب</option><option value="staff">المشرف</option><option value="admin">إدارة الكلية</option></select></label>':"")+'<label><span id="ul">سطر لكل حساب: الرقم الجامعي ثم الاسم (يمكنك لصق عمودين من Excel)</span><textarea name="l" rows="6" required placeholder="2022001&#9;أحمد محمد علي&#10;2022002&#9;سارة خالد"></textarea></label><div class="two" id="stuf"><label>تصنيف الطلاب (لكل حسابات هذه الدفعة)<select name="g">'+opts(GENDERS,"")+'</select></label><label>مكان الدراسة (لكل حسابات هذه الدفعة)<select name="c">'+opts(CAMPUSES,"")+'</select></label></div><div class="meta" id="uh">أنشئ الطلاب والطالبات في دفعتين منفصلتين لاختلاف التصنيف.</div><div><button class="btn" type="submit">إنشاء الحسابات</button></div></form></div>'+users;
 }
 function bindUsers(){
@@ -252,8 +252,16 @@ function bindUsers(){
     toast("أُنشئ "+d.created.length+" حساب"+(d.skipped.length||bad?" وتخطّى "+(d.skipped.length+bad):""),!d.created.length);
     render();window.scrollTo(0,0)});
   document.querySelectorAll("[data-a]").forEach(function(b){b.onclick=act(async function(){
-    var a=b.dataset.a;if(a==="reset"&&!confirm("إعادة تعيين كلمة المرور لهذا الحساب؟"))return;
+    var a=b.dataset.a;
+    if(a==="reset"&&!confirm("إعادة تعيين كلمة المرور لهذا الحساب؟"))return;
     if(a==="deactivate"&&!confirm("إيقاف هذا الحساب؟ لن يستطيع الدخول."))return;
+    if(a==="delete"){
+      if(!can("users:manage")||S.me.role!=="admin")throw new Error("حذف الحسابات مسموح لإدارة الكلية فقط");
+      if(!confirm("حذف الحساب نهائياً؟ إذا كان مرتبطاً بأبحاث أو ملفات سيُرفض الحذف للحفاظ على السجلات."))return;
+      await api("/users/"+b.dataset.id,{method:"DELETE"});
+      S.users=(await api("/users")).users;
+      toast("تم حذف الحساب");render();return;
+    }
     var d=await api("/users/"+b.dataset.id,{method:"PATCH",body:{action:a}});
     S.users=(await api("/users")).users;
     if(a==="reset"){var u=S.users.find(function(x){return String(x.id)===b.dataset.id});S.creds=[{username:u.username,name:u.name,tempPassword:d.tempPassword}];window.scrollTo(0,0)}
@@ -339,11 +347,19 @@ function bindLib(){
 
 /* ===== المشرفون الأكاديميون (للإدارة) ===== */
 function supsView(){
-  return '<div class="card"><h2>إضافة مشرفين أكاديميين</h2><form id="sf2"><label>سطر لكل مشرف (الاسم كما سيظهر في القائمة)<textarea name="n" rows="5" required placeholder="د. أحمد محمد&#10;أ. سارة علي"></textarea></label><div><button class="btn" type="submit">إضافة إلى القائمة</button></div></form></div><div class="card"><h2>قائمة المشرفين ('+S.sups.length+')</h2>'+(S.sups.length?'<div class="scroll"><table><tr><th>الاسم</th><th>الحالة</th><th></th></tr>'+S.sups.map(function(s){return "<tr><td>"+esc(s.name)+"</td><td>"+(s.active?"ظاهر في القائمة":"موقوف")+'</td><td><button class="btn ghost sm" data-s="'+s.id+'" data-a="'+(s.active?"deactivate":"activate")+'">'+(s.active?"إيقاف":"تفعيل")+"</button></td></tr>"}).join("")+'</table></div><div class="meta" style="margin-top:8px">إيقاف مشرف يخفيه من القوائم الجديدة، وتبقى الأبحاث السابقة باسمه.</div>':'<p class="empty">لم تُضف أسماء بعد.</p>')+"</div>";
+  var creds=S.supervisorCreds||[];
+  var credBox=creds.length?'<div class="card"><h2>بيانات الدخول المؤقتة</h2><p class="warn">انسخ هذه البيانات وسلّمها للمشرفين؛ لن تُعرض مرة أخرى بعد مغادرة الصفحة. سيُطلب تغيير كلمة المرور عند أول دخول.</p><div class="scroll"><table><tr><th>اسم المستخدم</th><th>المشرف</th><th>كلمة المرور المؤقتة</th></tr>'+creds.map(function(c){return "<tr><td><mono>"+esc(c.username)+"</mono></td><td>"+esc(c.name)+"</td><td><mono>"+esc(c.tempPassword)+"</mono></td></tr>"}).join("")+'</table></div><button class="btn ghost" id="hideSupCreds">إخفاء بيانات الدخول</button></div>':"";
+  return credBox+'<div class="card"><h2>إضافة مشرفين وإنشاء حساباتهم</h2><p class="meta">أدخل سطراً لكل مشرف: اسم المستخدم بالإنجليزية ثم الاسم الكامل، وبينهما مسافة أو فاصلة.</p><form id="sf2"><label>قائمة المشرفين<textarea name="n" rows="5" required placeholder="ahmad.ali    د. أحمد علي\nsara.khaled    أ. سارة خالد"></textarea></label><div><button class="btn" type="submit">إضافة المشرفين وإنشاء الحسابات</button></div></form></div><div class="card"><h2>قائمة المشرفين ('+S.sups.length+')</h2>'+(S.sups.length?'<div class="scroll"><table><tr><th>الاسم</th><th>الحالة</th><th></th></tr>'+S.sups.map(function(s){return "<tr><td>"+esc(s.name)+"</td><td>"+(s.active?"ظاهر في القائمة":"موقوف")+'</td><td><button class="btn ghost sm" data-s="'+s.id+'" data-a="'+(s.active?"deactivate":"activate")+'">'+(s.active?"إيقاف":"تفعيل")+"</button></td></tr>"}).join("")+'</table></div><div class="meta" style="margin-top:8px">إيقاف مشرف يخفيه من القوائم الجديدة، وتبقى الأبحاث السابقة باسمه.</div>':'<p class="empty">لم تُضف أسماء بعد.</p>')+"</div>";
 }
 function bindSups(){
-  $("#sf2").onsubmit=act(async function(e){e.preventDefault();var names=String(new FormData(e.target).get("n")).split(/\r?\n/).map(function(x){return x.trim()}).filter(Boolean);
-    var d=await api("/supervisors",{method:"POST",body:{names:names}});S.sups=(await api("/supervisors?all=1")).supervisors;toast("تمت إضافة "+d.added+" مشرف");render()});
+  var hide=$("#hideSupCreds");if(hide)hide.onclick=function(){S.supervisorCreds=[];render()};
+  $("#sf2").onsubmit=act(async function(e){e.preventDefault();var supervisors=String(new FormData(e.target).get("n")).split(/\r?\n/).map(function(line){var m=line.trim().match(/^(\S+)[\t,،; ]+(.+)$/);return m?{username:m[1],name:m[2].trim()}:null}).filter(Boolean);
+    if(!supervisors.length)throw new Error("أدخل اسم المستخدم ثم الاسم الكامل في كل سطر");
+    var d=await api("/supervisors",{method:"POST",body:{supervisors:supervisors}});
+    S.supervisorCreds=d.created||[];
+    S.sups=(await api("/supervisors?all=1")).supervisors;
+    toast("أُنشئ "+S.supervisorCreds.length+" حساب مشرف"+(d.skipped&&d.skipped.length?"، وتعذّر إنشاء "+d.skipped.length:""));
+    render()});
   document.querySelectorAll("[data-s]").forEach(function(b){b.onclick=act(async function(){
     await api("/supervisors/"+b.dataset.s,{method:"PATCH",body:{action:b.dataset.a}});S.sups=(await api("/supervisors?all=1")).supervisors;render()})});
 }
