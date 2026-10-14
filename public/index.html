@@ -23,8 +23,8 @@ body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.8 Cairo,Taho
 nav.bar{background:var(--green)}
 nav.bar .wrap{display:flex;justify-content:space-between;align-items:center;gap:10px}
 .tabs{display:flex;overflow-x:auto}
-.tabs a{color:#fff;padding:12px 16px;font-weight:600;font-size:.95rem;cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;text-decoration:none}
-.tabs a[aria-current=page]{border-color:var(--gold)}
+.tabs{display:flex;gap:7px;overflow-x:auto;padding:7px 0}.tabs a{color:#fff;padding:7px 14px;font-weight:600;font-size:.95rem;cursor:pointer;border:1px solid rgba(255,255,255,.5);border-radius:8px;background:rgba(255,255,255,.08);white-space:nowrap;text-decoration:none;transition:background .2s ease,border-color .2s ease,transform .2s ease}.tabs a:hover{background:rgba(255,255,255,.18);border-color:#fff;transform:translateY(-1px)}
+.tabs a[aria-current=page]{background:#fff;color:var(--green);border-color:#fff;box-shadow:0 2px 5px rgba(0,0,0,.14)}
 .chip{background:var(--green2);color:#fff;border-radius:20px;padding:4px 6px 4px 14px;font-size:.88rem;display:flex;gap:10px;align-items:center;white-space:nowrap}
 .chip button{background:none;border:0;color:var(--gold);font:inherit;cursor:pointer;padding:0 6px}
 .hero{background:linear-gradient(90deg,var(--teal),var(--green));color:#fff;padding:34px 0}
