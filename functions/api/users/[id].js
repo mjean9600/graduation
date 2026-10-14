@@ -1,6 +1,6 @@
 import { json, err, can, hashPassword, genPassword, audit } from '../../_lib.js';
 
-// body: {action:'reset'|'deactivate'|'activate'}
+// إدارة الحسابات: الإيقاف وإعادة التعيين متاحان وفق الدور، والحذف للإدارة فقط.
 export async function onRequestPatch({ request, env, data, params }) {
   const u = data.user;
   if (!can(u, 'users:create_student')) return err('غير مصرّح', 403);
@@ -24,4 +24,26 @@ export async function onRequestPatch({ request, env, data, params }) {
     return json({ ok: true });
   }
   return err('إجراء غير معروف');
+}
+
+export async function onRequestDelete({ env, data, params }) {
+  const u = data.user;
+  if (!can(u, 'users:manage') || u.role !== 'admin') return err('حذف الحسابات من صلاحية إدارة الكلية فقط', 403);
+  const t = await env.DB.prepare('SELECT id,username,role FROM users WHERE id=?').bind(params.id).first();
+  if (!t) return err('الحساب غير موجود', 404);
+  if (t.id === u.id) return err('لا يمكنك حذف الحساب الذي تستخدمه حالياً');
+  if (t.role === 'admin') return err('لا يمكن حذف حساب إدارة الكلية من هذه الواجهة');
+
+  const owned = await env.DB.prepare('SELECT COUNT(*) AS n FROM researches WHERE owner_id=?').bind(t.id).first();
+  const uploaded = await env.DB.prepare('SELECT COUNT(*) AS n FROM files WHERE uploaded_by=?').bind(t.id).first();
+  const library = await env.DB.prepare('SELECT COUNT(*) AS n FROM library WHERE uploaded_by=?').bind(t.id).first();
+  if (owned.n || uploaded.n || library.n)
+    return err('هذا الحساب مرتبط بأبحاث أو ملفات محفوظة؛ أوقفه بدلاً من حذفه حتى لا تضيع السجلات.');
+
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM sessions WHERE user_id=?').bind(t.id),
+    env.DB.prepare('DELETE FROM users WHERE id=?').bind(t.id),
+  ]);
+  await audit(env, u.id, 'user:delete', t.id);
+  return json({ ok: true });
 }
