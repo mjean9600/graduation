@@ -5,9 +5,15 @@ export async function onRequestPatch({ request, env, data, params }) {
   const u = data.user;
   if (!can(u, 'users:create_student')) return err('غير مصرّح', 403);
   let b; try { b = await request.json(); } catch { return err('بيانات غير صالحة'); }
-  const t = await env.DB.prepare('SELECT id,role FROM users WHERE id=?').bind(params.id).first();
+  const t = await env.DB.prepare('SELECT id,name,role FROM users WHERE id=?').bind(params.id).first();
   if (!t) return err('غير موجود', 404);
   if (t.role !== 'student' && !can(u, 'users:manage')) return err('غير مصرّح', 403);
+  if (u.role === 'staff' && t.role === 'student') {
+    const assigned = await env.DB.prepare(
+      'SELECT 1 FROM researches WHERE owner_id=? AND supervisor=? LIMIT 1'
+    ).bind(t.id, u.name).first();
+    if (!assigned) return err('هذا الطالب ليس ضمن مجموعة أبحاثك', 403);
+  }
   if (t.id === u.id && b.action === 'deactivate') return err('لا يمكنك إيقاف حسابك');
 
   if (b.action === 'reset') {
@@ -39,7 +45,6 @@ export async function onRequestDelete({ env, data, params }) {
   const t = await env.DB.prepare('SELECT id,username,name,role,active FROM users WHERE id=?').bind(params.id).first();
   if (!t) return err('الحساب غير موجود', 404);
   if (String(t.id) === String(u.id)) return err('لا يمكنك حذف الحساب الذي تستخدمه حالياً');
-  if (!t.active) return json({ ok: true, preserved: true, message: 'الحساب موقوف مسبقاً، والسجلات محفوظة.' });
 
   if (isSupervisor) {
     if (t.role !== 'student') return err('يمكن للمشرف حذف حسابات الطلاب فقط', 403);
@@ -56,6 +61,7 @@ export async function onRequestDelete({ env, data, params }) {
       return err('إدارة الكلية تستطيع حذف حسابات الطلاب والمشرفين فقط', 403);
     }
   }
+  if (!t.active) return json({ ok: true, preserved: true, message: 'الحساب موقوف مسبقاً، والسجلات محفوظة.' });
 
   // الحذف منطقي: تعطيل الدخول فقط حتى تبقى الأبحاث والملفات مرتبطة بمعرّف المالك نفسه.
   const batch = [
