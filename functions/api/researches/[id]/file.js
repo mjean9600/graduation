@@ -65,6 +65,10 @@ export async function onRequestDelete({ request, env, data, params }) {
   if (!can(u, 'file:delete')) return err('غير مصرّح بحذف الملفات', 403);
   const r = await getResearch(env, params.id, u);
   if (!r) return err('غير موجود', 404);
+  // المشرف يحذف ملفات أبحاث مجموعته فقط؛ إدارة الكلية تملك الصلاحية على جميع الأبحاث.
+  if (u.role === 'staff' && r.supervisor !== u.name) {
+    return err('يمكنك حذف ملفات أبحاث مجموعتك فقط', 403);
+  }
   const v = Number(new URL(request.url).searchParams.get('v'));
   const row = await env.DB.prepare('SELECT id,r2_key FROM files WHERE research_id=? AND version=?').bind(r.id, v).first();
   if (!row) return err('الملف غير موجود', 404);
