@@ -51,8 +51,7 @@ export async function onRequestDelete({ env, data, params }) {
     if (t.role === 'student') {
       // إدارة الكلية تستطيع إيقاف حساب الطالب مع الإبقاء على سجله البحثي.
     } else if (t.role === 'staff') {
-      const supervisor = await env.DB.prepare('SELECT id FROM supervisors WHERE name=? LIMIT 1').bind(t.name).first();
-      if (!supervisor) return err('هذا الحساب ليس مرتبطاً بمشرف أكاديمي', 403);
+      // إدارة الكلية تستطيع إيقاف أي حساب مشرف، حتى لو كان سجل المشرف الأكاديمي غير مكتمل.
     } else {
       return err('إدارة الكلية تستطيع حذف حسابات الطلاب والمشرفين فقط', 403);
     }
