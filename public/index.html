@@ -131,7 +131,7 @@ function render(){
   else if(S.view==="sups"){hero=["المشرفون الأكاديميون","القائمة التي يختار منها الطلاب عند رفع البحث"];content=supsView();after=bindSups}
   else if(S.view==="detail"&&S.detail){hero=["تفاصيل البحث",S.detail.research.title];content=detailView();after=bindDetail}
   else{hero=["أبحاث التخرج","كلية الدعوة الإسلامية - قسم أبحاث التخرج"];content=listView();after=bindList}
-  $("#root").innerHTML=header()+navHtml()+heroHtml(hero[0],hero[1])+'<main class="wrap pg" style="padding-top:32px">'+content+'<div style="height:80px" aria-hidden="true"></div></main><footer class="noprint">جميع الحقوق محفوظة - كلية الدعوة الإسلامية - غزة</footer>';
+  $("#root").innerHTML=header()+navHtml()+heroHtml(hero[0],hero[1])+'<main class="wrap pg">'+content+'<div style="height:80px" aria-hidden="true"></div></main><footer class="noprint">جميع الحقوق محفوظة - كلية الدعوة الإسلامية - غزة</footer>';
   document.querySelectorAll(".tabs a").forEach(function(a){a.onclick=act(function(){return go(a.dataset.v)})});
   document.querySelectorAll("[data-h]").forEach(function(b){b.onclick=act(function(){return go(b.dataset.h)})});
   var o=$("#out");if(o)o.onclick=act(async function(){await api("/logout",{method:"POST"});S.me=null;S.view="list";render()});
