@@ -30,28 +30,44 @@ export async function onRequestDelete({ env, data, params }) {
   const u = data.user;
   const isRootAdmin = u?.role === 'admin' && u?.username === 'admin';
   const isCollegeAdmin = u?.role === 'admin' && can(u, 'users:manage') && !isRootAdmin;
-  if (!isRootAdmin && !isCollegeAdmin) return err('غير مصرّح بحذف الحسابات', 403);
+  const isSupervisor = u?.role === 'staff' && can(u, 'users:create_student');
+  if (!isRootAdmin && !isCollegeAdmin && !isSupervisor) return err('غير مصرّح بحذف الحسابات', 403);
 
-  const t = await env.DB.prepare('SELECT id,username,name,role FROM users WHERE id=?').bind(params.id).first();
+  const t = await env.DB.prepare('SELECT id,username,name,role,active FROM users WHERE id=?').bind(params.id).first();
   if (!t) return err('الحساب غير موجود', 404);
   if (String(t.id) === String(u.id)) return err('لا يمكنك حذف الحساب الذي تستخدمه حالياً');
+  if (!t.active) return json({ ok: true, preserved: true, message: 'الحساب موقوف مسبقاً، والسجلات محفوظة.' });
 
-  if (!isRootAdmin) {
-    if (t.role !== 'staff') return err('إدارة الكلية تستطيع حذف حسابات المشرفين الأكاديميين فقط', 403);
-    const supervisor = await env.DB.prepare('SELECT id FROM supervisors WHERE name=? LIMIT 1').bind(t.name).first();
-    if (!supervisor) return err('هذا الحساب ليس مرتبطاً بمشرف أكاديمي', 403);
+  if (isSupervisor) {
+    if (t.role !== 'student') return err('يمكن للمشرف حذف حسابات الطلاب فقط', 403);
+    const assigned = await env.DB.prepare(
+      'SELECT 1 FROM researches WHERE owner_id=? AND supervisor=? LIMIT 1'
+    ).bind(t.id, u.name).first();
+    if (!assigned) return err('هذا الطالب ليس ضمن مجموعة أبحاثك', 403);
+  } else if (isCollegeAdmin) {
+    if (t.role === 'student') {
+      // إدارة الكلية تستطيع إيقاف حساب الطالب مع الإبقاء على سجله البحثي.
+    } else if (t.role === 'staff') {
+      const supervisor = await env.DB.prepare('SELECT id FROM supervisors WHERE name=? LIMIT 1').bind(t.name).first();
+      if (!supervisor) return err('هذا الحساب ليس مرتبطاً بمشرف أكاديمي', 403);
+    } else {
+      return err('إدارة الكلية تستطيع حذف حسابات الطلاب والمشرفين فقط', 403);
+    }
   }
 
-  const owned = await env.DB.prepare('SELECT COUNT(*) AS n FROM researches WHERE owner_id=?').bind(t.id).first();
-  const uploaded = await env.DB.prepare('SELECT COUNT(*) AS n FROM files WHERE uploaded_by=?').bind(t.id).first();
-  const library = await env.DB.prepare('SELECT COUNT(*) AS n FROM library WHERE uploaded_by=?').bind(t.id).first();
-  if (owned.n || uploaded.n || library.n)
-    return err('هذا الحساب مرتبط بأبحاث أو ملفات محفوظة؛ أوقفه بدلاً من حذفه حتى لا تضيع السجلات.');
-
-  await env.DB.batch([
+  // الحذف منطقي: تعطيل الدخول فقط حتى تبقى الأبحاث والملفات مرتبطة بمعرّف المالك نفسه.
+  const batch = [
+    env.DB.prepare('UPDATE users SET active=0 WHERE id=?').bind(t.id),
     env.DB.prepare('DELETE FROM sessions WHERE user_id=?').bind(t.id),
-    env.DB.prepare('DELETE FROM users WHERE id=?').bind(t.id),
-  ]);
-  await audit(env, u.id, 'user:delete', t.id);
-  return json({ ok: true });
+  ];
+  if (t.role === 'staff') {
+    batch.push(env.DB.prepare('UPDATE supervisors SET active=0 WHERE name=?').bind(t.name));
+  }
+  await env.DB.batch(batch);
+  await audit(env, u.id, 'user:delete_preserve_records', t.id);
+  return json({
+    ok: true,
+    preserved: true,
+    message: 'تم حذف الحساب من الحسابات الفعّالة مع الاحتفاظ بالأبحاث والملفات. يمكن استعادته عند إعادة التسجيل بنفس اسم المستخدم.'
+  });
 }
