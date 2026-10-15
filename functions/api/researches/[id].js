@@ -36,6 +36,7 @@ export async function onRequestPatch({ request, env, data, params }) {
     if (b.supervisor !== undefined) {
       const s = String(b.supervisor).trim();
       if (s !== r.supervisor) {
+        if (u.role !== 'admin') return err('تغيير المشرف الأكاديمي من صلاحية إدارة الكلية فقط', 403);
         const ok = await env.DB.prepare('SELECT 1 FROM supervisors WHERE name=? AND active=1').bind(s).first();
         if (!ok) return err('اختر المشرف الأكاديمي من القائمة');
       }
