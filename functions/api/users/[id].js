@@ -20,6 +20,9 @@ export async function onRequestPatch({ request, env, data, params }) {
   if (b.action === 'deactivate' || b.action === 'activate') {
     await env.DB.prepare('UPDATE users SET active=? WHERE id=?').bind(b.action === 'activate' ? 1 : 0, t.id).run();
     if (b.action === 'deactivate') await env.DB.prepare('DELETE FROM sessions WHERE user_id=?').bind(t.id).run();
+    if (b.action === 'activate' && t.role === 'staff') {
+      await env.DB.prepare('UPDATE supervisors SET active=1 WHERE name=(SELECT name FROM users WHERE id=?)').bind(t.id).run();
+    }
     await audit(env, u.id, 'user:' + b.action, t.id);
     return json({ ok: true });
   }
